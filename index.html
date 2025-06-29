@@ -351,9 +351,664 @@
                 pieces: [],
                 players: {
                     p1: { id: 'p1', color: null, dieType: null, piecesInReserve: 16, capturedOpponentPieces: 0 },
-                    p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 16, <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crownfall (Official Rules)</title>
+                    p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 16, capturedOpponentPieces: 0 }
+                },
+                crownSpaces: { p1: { row: 4, col: 3 }, p2: { row: 0, col: 3 } },
+                turn: null, gamePhase: 'SETUP_D20_ROLL', winner: null,
+                message: "Let's begin! Roll to see who goes first.",
+                rollMessage: '', selectedPieceId: null,
+                highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [],
+                pendingAttack: null, pendingChainJump: null, pieceToCrownId: null,
+                actions: [{ text: 'Roll for Initiative', onClick: setupRollOff }]
+            };
+            getEl('victoryModal').classList.remove('visible');
+            getEl('crownChoiceModal').classList.remove('visible');
+            getEl('reinforceChoiceModal').classList.remove('visible');
+            render();
+        }
+        
+        // ... (All functions from setupRollOff to selectPiece are unchanged)
+        async function setupRollOff() {
+            gameState.actions = [];
+            render();
+            const p1Result = await showDiceRoll(1, "Player 1 Rolling...", false);
+            const p2Result = await showDiceRoll(1, "Bot Rolling...", false);
+            const p1Roll = p1Result.rolls[0];
+            const p2Roll = p2Result.rolls[0];
+
+            gameState.rollMessage = `Player 1 rolled a ${p1Roll}. Bot rolled a ${p2Roll}.`;
+            let firstPlayer;
+            if (p1Roll > p2Roll) {
+                firstPlayer = 'p1';
+                gameState.gamePhase = 'SETUP_CHOICE';
+                gameState.message = 'You rolled higher! You will move first. Choose your color and die type.';
+            } else if (p2Roll > p1Roll) {
+                firstPlayer = 'p2';
+                const botColor = Math.random() < 0.5 ? '#2a9d8f' : '#e76f51';
+                const botDieType = Math.random() < 0.5 ? 'even' : 'odd';
+                gameState.players.p2.color = botColor;
+                gameState.players.p2.dieType = botDieType;
+                gameState.players.p1.color = botColor === '#2a9d8f' ? '#e76f51' : '#2a9d8f';
+                gameState.players.p1.dieType = botDieType === 'even' ? 'odd' : 'even';
+                gameState.message = `Bot rolled higher and will move first. Bot has chosen its settings.`;
+                startPlacementPhase(firstPlayer);
+            } else {
+                gameState.message = "It's a tie! Roll again.";
+                gameState.actions = [{ text: 'Roll for Initiative', onClick: setupRollOff }];
+            }
+            gameState.turn = firstPlayer;
+            render();
+        }
+
+        function chooseColor(color) {
+            if (gameState.gamePhase !== 'SETUP_CHOICE' || gameState.players.p1.color) return;
+            gameState.players.p1.color = color;
+            gameState.players.p2.color = color === '#2a9d8f' ? '#e76f51' : '#2a9d8f';
+            checkSetupChoices();
+        }
+        function chooseDieType(type) {
+            if (gameState.gamePhase !== 'SETUP_CHOICE' || gameState.players.p1.dieType) return;
+            gameState.players.p1.dieType = type;
+            gameState.players.p2.dieType = type === 'even' ? 'odd' : 'even';
+            checkSetupChoices();
+        }
+        function checkSetupChoices() {
+            if (gameState.players.p1.color && gameState.players.p1.dieType) {
+                startPlacementPhase(gameState.turn);
+            }
+            render();
+        }
+
+        function startPlacementPhase(firstPlayer) {
+            gameState.gamePhase = 'SETUP_PLACEMENT';
+            gameState.placingPlayer = firstPlayer;
+            gameState.piecesToPlace = 4;
+            gameState.actions = [];
+            if (firstPlayer === 'p2') {
+                placeBotStartingPieces();
+                gameState.placingPlayer = 'p1';
+                gameState.message = "Bot has placed its pieces. Now, place your 4 pieces on your starting row.";
+            } else {
+                gameState.message = 'Your turn to place 4 pieces on the starting row.';
+            }
+            highlightPlacementSpots();
+            render();
+        }
+        
+        function highlightPlacementSpots() {
+            gameState.highlightedPlacements = [];
+            const player = gameState.placingPlayer;
+            const startRow = player === 'p1' ? gameState.boardSize.rows - 1 : 0;
+            const crownCol = gameState.crownSpaces[player].col;
+            for (let c = 0; c < gameState.boardSize.cols; c++) {
+                if (c !== crownCol && gameState.board[startRow][c] === null) {
+                    gameState.highlightedPlacements.push({ r: startRow, c });
+                }
+            }
+        }
+        
+        function placeStartingPiece(r, c) {
+            if (gameState.highlightedPlacements.some(p => p.r === r && p.c === c)) {
+                const newId = gameState.pieces.length + 1;
+                gameState.pieces.push({ id: newId, owner: 'p1', isCrowned: false, position: { r, c } });
+                gameState.board[r][c] = newId;
+                gameState.players.p1.piecesInReserve--;
+                gameState.piecesToPlace--;
+                gameState.message = `Placed piece. ${gameState.piecesToPlace} remaining.`;
+                if (gameState.piecesToPlace === 0) {
+                    if (gameState.pieces.filter(p => p.owner === 'p2').length === 0) { placeBotStartingPieces(); }
+                    setTimeout(startGame, 500);
+                }
+                highlightPlacementSpots();
+                render();
+            }
+        }
+        
+        function placeBotStartingPieces() {
+            const startRow = 0;
+            const crownCol = gameState.crownSpaces.p2.col;
+            const validCols = [];
+            for (let c = 0; c < gameState.boardSize.cols; c++) {
+                 if (c !== crownCol) {
+                    validCols.push(c);
+                }
+            }
+
+            let placed = 0;
+            while (placed < 4 && validCols.length > 0) {
+                const randIndex = Math.floor(Math.random() * validCols.length);
+                const c = validCols.splice(randIndex, 1)[0];
+                const newId = gameState.pieces.length + 1;
+                gameState.pieces.push({ id: newId, owner: 'p2', isCrowned: false, position: { r: startRow, c } });
+                gameState.board[startRow][c] = newId;
+                gameState.players.p2.piecesInReserve--;
+                placed++;
+            }
+        }
+
+        function startGame() {
+            gameState.gamePhase = 'PLAYING';
+            gameState.highlightedPlacements = [];
+            if (gameState.turn === 'p2') {
+                gameState.message = `Bot moves first.`;
+                setTimeout(botTurn, 1000);
+            } else {
+                gameState.message = `You move first. Select a piece.`;
+            }
+            gameState.actions = [];
+            render();
+        }
+
+        function selectPiece(pieceId) {
+            if (gameState.pendingChainJump || gameState.gamePhase !== 'PLAYING') return; 
+            if (gameState.selectedPieceId === pieceId) {
+                gameState.selectedPieceId = null;
+                gameState.highlightedMoves = [];
+                gameState.highlightedAttacks = [];
+                gameState.actions = [];
+            } else {
+                gameState.selectedPieceId = pieceId;
+                const piece = getPiece(pieceId);
+                const {r, c} = piece.position;
+                
+                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                gameState.highlightedMoves = moves.filter(m => 
+                    !isOutOfBounds(m.r, m.c) && 
+                    !getPieceAt(m.r, m.c) && 
+                    !isIllegalHomeRow(piece.owner, m.r)
+                );
+                
+                const attacks = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
+                gameState.highlightedAttacks = [];
+                for (const attackDir of attacks) {
+                    const targetPos = {r: r + attackDir.dr, c: c + attackDir.dc};
+                    const landingPos = {r: r + attackDir.dr * 2, c: c + attackDir.dc * 2};
+                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
+                    
+                    const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && 
+                                           !getPieceAt(landingPos.r, landingPos.c) && 
+                                           !isIllegalHomeRow(piece.owner, landingPos.r);
+
+                    if (targetPiece && targetPiece.owner !== piece.owner && isValidLanding) {
+                        gameState.highlightedAttacks.push({ target: targetPos, landing: landingPos, dir: attackDir });
+                    }
+                }
+                
+                gameState.actions = [];
+                if (piece.isCrowned && gameState.highlightedAttacks.length > 0) {
+                     gameState.actions.push({ text: 'Declare Chain Jump', onClick: () => declareChainJump() });
+                }
+            }
+            render();
+        }
+        
+        function declareChainJump() {
+            // ... (unchanged)
+            if (!gameState.selectedPieceId) return;
+            const piece = getPiece(gameState.selectedPieceId);
+            if (!piece.isCrowned || gameState.highlightedAttacks.length === 0) return;
+
+            gameState.pendingChainJump = { pieceId: gameState.selectedPieceId };
+            gameState.message = "Chain Jump declared! Click a highlighted square to perform the first attack.";
+            gameState.actions = [{ text: "Cancel Chain Jump", onClick: () => {
+                gameState.pendingChainJump = null;
+                selectPiece(gameState.selectedPieceId);
+            }}];
+            render();
+        }
+
+        function declareMoveOrAttack(r, c) {
+            // ... (unchanged)
+            const attack = gameState.highlightedAttacks.find(a => a.landing.r === r && a.landing.c === c);
+            const move = gameState.highlightedMoves.find(m => m.r === r && m.c === c);
+
+            if (gameState.pendingChainJump) {
+                if(attack) {
+                    gameState.pendingChainJump.targetPos = attack.target;
+                    gameState.pendingChainJump.landingPos = attack.landing;
+                    gameState.pendingChainJump.dir = attack.dir;
+                    gameState.message = "Roll to start your Chain Jump attack!";
+                    gameState.actions = [{ text: "Roll to Attack", onClick: executeAttack }];
+                    gameState.highlightedMoves = [];
+                    gameState.highlightedAttacks = [];
+                }
+            } else if (move) {
+                executeMove(gameState.selectedPieceId, move.r, move.c);
+            } else if (attack) {
+                gameState.pendingAttack = { pieceId: gameState.selectedPieceId, targetPos: attack.target, landingPos: attack.landing };
+                gameState.message = "You have declared an attack!";
+                gameState.actions = [{ text: "Roll to Attack", onClick: executeAttack }];
+                gameState.highlightedMoves = [];
+                gameState.highlightedAttacks = [];
+            }
+            render();
+        }
+        
+        function executeMove(pieceId, r, c) {
+            // ... (unchanged)
+            const piece = getPiece(pieceId);
+            movePieceOnBoard(piece, r, c);
+            
+            const opponentId = piece.owner === 'p1' ? 'p2' : 'p1';
+            const opponentCrownSpace = gameState.crownSpaces[opponentId];
+
+            if (r === opponentCrownSpace.r && c === opponentCrownSpace.c) {
+                enterCrowningPhase(pieceId);
+            } else {
+                endTurn();
+            }
+        }
+
+        async function executeAttack() {
+            // ... (unchanged)
+            const isChainJump = !!gameState.pendingChainJump;
+            const attackData = isChainJump ? gameState.pendingChainJump : gameState.pendingAttack;
+            if (!attackData) return;
+
+            const { pieceId, targetPos, landingPos } = attackData;
+            gameState.pendingAttack = null;
+            gameState.actions = [];
+            render();
+
+            const attacker = getPiece(pieceId);
+            const defender = getPieceAt(targetPos.r, targetPos.c);
+            let numRolls = 1;
+            if (attacker.isCrowned && defender.isCrowned) numRolls = 7;
+            else if (!attacker.isCrowned && defender.isCrowned) numRolls = 3;
+            else if (attacker.isCrowned && !defender.isCrowned) numRolls = 1; 
+            
+            const result = await showDiceRoll(numRolls, `${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} Attacking...`, true, attacker.owner);
+            const { successes, defenderSuccesses } = result;
+
+            if (isChainJump) { 
+                if (successes >= 1) {
+                    resolveChainJump(attackData);
+                } else {
+                    gameState.message = "Chain Jump failed! The first attack was unsuccessful.";
+                    gameState.pendingChainJump = null;
+                    setTimeout(endTurn, 2000);
+                }
+                return;
+            }
+
+            let attackSucceeded = false;
+            let message = "";
+            
+            if (!attacker.isCrowned && !defender.isCrowned) {
+                if (successes >= 1) { attackSucceeded = true; message = "Attack successful!"; } 
+                else { message = "Attack failed!"; }
+            } else if (!attacker.isCrowned && defender.isCrowned) {
+                if (successes >= 2) { 
+                    defender.isCrowned = false; 
+                    message = "Attack successful! Defender is uncrowned."; 
+                } else { 
+                    message = "Attack failed! Defender is safe."; 
+                }
+            } else if (attacker.isCrowned && defender.isCrowned) {
+                if (successes >= 4) {
+                    defender.isCrowned = false;
+                    message = "Crowned attack successful! Defender is uncrowned.";
+                } else if (defenderSuccesses >= 4) {
+                    attacker.isCrowned = false;
+                    message = "Crowned attack FAILED! Defender wins the roll-off. Your piece is uncrowned.";
+                } else {
+                    message = `Roll-off is a draw (${successes} to ${defenderSuccesses}). No pieces are changed.`;
+                }
+            } else if (attacker.isCrowned && !defender.isCrowned) {
+                if (successes >= 1) { attackSucceeded = true; message = "Crowned attack successful!"; } 
+                else { message = "Crowned attack failed!"; }
+            }
+
+            gameState.message = message;
+            if (attackSucceeded) {
+                gameState.players[attacker.owner].capturedOpponentPieces++;
+                gameState.board[targetPos.r][targetPos.c] = null;
+                gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
+                movePieceOnBoard(attacker, landingPos.r, landingPos.c);
+
+                const opponentId = attacker.owner === 'p1' ? 'p2' : 'p1';
+                const opponentCrownSpace = gameState.crownSpaces[opponentId];
+                if (landingPos.r === opponentCrownSpace.r && landingPos.c === opponentCrownSpace.c) {
+                    enterCrowningPhase(attacker.id);
+                } else {
+                     setTimeout(endTurn, 2000);
+                }
+            } else {
+                 setTimeout(endTurn, 2000);
+            }
+        }
+
+        function resolveChainJump(attackData) {
+            // ... (unchanged)
+            const { pieceId, targetPos, landingPos, dir } = attackData;
+            const attacker = getPiece(pieceId);
+            const defender = getPieceAt(targetPos.r, targetPos.c);
+
+            gameState.players[attacker.owner].capturedOpponentPieces++;
+            gameState.board[targetPos.r][targetPos.c] = null;
+            gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
+            
+            gameState.board[attacker.position.r][attacker.position.c] = null;
+            attacker.isCrowned = false;
+            
+            movePieceOnBoard(attacker, landingPos.r, landingPos.c);
+            
+            const secondLandingPos = { r: landingPos.r + dir.dr, c: landingPos.c + dir.dc };
+            const isSecondJumpBlocked = isOutOfBounds(secondLandingPos.r, secondLandingPos.c) || 
+                                       getPieceAt(secondLandingPos.r, secondLandingPos.c) ||
+                                       isIllegalHomeRow(attacker.owner, secondLandingPos.r);
+            
+            let newPieceId = null;
+            if (isSecondJumpBlocked) {
+                 gameState.message = "Chain jump successful, but the second jump was blocked!";
+            } else {
+                newPieceId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
+                gameState.pieces.push({ id: newPieceId, owner: attacker.owner, isCrowned: false, position: secondLandingPos });
+                gameState.board[secondLandingPos.r][secondLandingPos.c] = newPieceId;
+                gameState.message = "Chain jump successful! The piece has split.";
+            }
+            
+            gameState.pendingChainJump = null;
+            const opponentId = attacker.owner === 'p1' ? 'p2' : 'p1';
+            const opponentCrownSpace = gameState.crownSpaces[opponentId];
+
+            if (landingPos.r === opponentCrownSpace.r && landingPos.c === opponentCrownSpace.c) {
+                enterCrowningPhase(attacker.id);
+            } else if (newPieceId && secondLandingPos.r === opponentCrownSpace.r && secondLandingPos.c === opponentCrownSpace.c) {
+                enterCrowningPhase(newPieceId);
+            } else {
+                setTimeout(endTurn, 2500);
+            }
+        }
+        
+        // ===== NEW REINFORCEMENT CHOICE FUNCTION =====
+        function promptReinforceChoice(leftFree, rightFree) {
+            getEl('crownChoiceModal').classList.remove('visible');
+            const reinforceModal = getEl('reinforceChoiceModal');
+            const actionsContainer = getEl('reinforceChoiceActions');
+            actionsContainer.innerHTML = '';
+
+            if (leftFree) {
+                const leftButton = document.createElement('button');
+                leftButton.textContent = "Place Left";
+                leftButton.onclick = () => {
+                    reinforceModal.classList.remove('visible');
+                    resolveCrowning('reinforce', 'left');
+                };
+                actionsContainer.appendChild(leftButton);
+            }
+            if (rightFree) {
+                const rightButton = document.createElement('button');
+                rightButton.textContent = "Place Right";
+                rightButton.onclick = () => {
+                    reinforceModal.classList.remove('visible');
+                    resolveCrowning('reinforce', 'right');
+                };
+                actionsContainer.appendChild(rightButton);
+            }
+            reinforceModal.classList.add('visible');
+        }
+
+        // ===== UPDATED FOR REINFORCEMENT CHOICE =====
+        function enterCrowningPhase(pieceId) {
+            gameState.gamePhase = 'AWAITING_CROWNING_CHOICE';
+            gameState.pieceToCrownId = pieceId;
+            const piece = getPiece(pieceId);
+            const player = piece.owner;
+            const playerObj = gameState.players[player];
+            const hasReserves = playerObj.piecesInReserve > 0;
+            
+            const opponentId = player === 'p1' ? 'p2' : 'p1';
+            const opponentCrownSpace = gameState.crownSpaces[opponentId];
+            
+            const leftSpotFree = !isOutOfBounds(opponentCrownSpace.r, opponentCrownSpace.c - 1) && !getPieceAt(opponentCrownSpace.r, opponentCrownSpace.c - 1);
+            const rightSpotFree = !isOutOfBounds(opponentCrownSpace.r, opponentCrownSpace.c + 1) && !getPieceAt(opponentCrownSpace.r, opponentCrownSpace.c + 1);
+            const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
+            
+            gameState.message = `${player === 'p1' ? 'You have' : 'Bot has'} reached the opponent's crown space!`;
+            gameState.actions = [];
+            render();
+
+            if (player === 'p1') {
+                const crownModal = getEl('crownChoiceModal');
+                const actionsContainer = getEl('crownChoiceActions');
+                actionsContainer.innerHTML = '';
+                getEl('crown-modal-reserve-count').textContent = playerObj.piecesInReserve;
+                
+                const crownButton = document.createElement('button');
+                crownButton.textContent = "Crown Piece";
+                crownButton.onclick = () => { crownModal.classList.remove('visible'); resolveCrowning('crown'); };
+                crownButton.disabled = !hasReserves;
+                actionsContainer.appendChild(crownButton);
+
+                const reinforceButton = document.createElement('button');
+                reinforceButton.textContent = "Place Reinforcement";
+                reinforceButton.onclick = () => promptReinforceChoice(leftSpotFree, rightSpotFree);
+                reinforceButton.disabled = !canReinforce;
+                actionsContainer.appendChild(reinforceButton);
+                
+                if (!hasReserves) {
+                    const noActionInfo = document.createElement('p');
+                    noActionInfo.textContent = "You have no pieces in reserve to take an action.";
+                    actionsContainer.appendChild(noActionInfo);
+                     setTimeout(() => { crownModal.classList.remove('visible'); resolveCrowning('none'); }, 2500);
+                }
+                crownModal.classList.add('visible');
+            } else {
+                // Bot Logic for choosing action and direction
+                setTimeout(() => {
+                    if (canReinforce) {
+                        const availableDirections = [];
+                        if (leftSpotFree) availableDirections.push('left');
+                        if (rightSpotFree) availableDirections.push('right');
+                        const direction = availableDirections[Math.floor(Math.random() * availableDirections.length)];
+                        resolveCrowning('reinforce', direction);
+                    } else if (hasReserves) {
+                        resolveCrowning('crown');
+                    } else {
+                        resolveCrowning('none');
+                    }
+                }, 1500);
+            }
+        }
+
+        // ===== UPDATED FOR REINFORCEMENT CHOICE =====
+        function resolveCrowning(choice, direction = null) {
+            const piece = getPiece(gameState.pieceToCrownId);
+            if (!piece) { endTurn(); return; }
+            const player = piece.owner;
+            const playerObj = gameState.players[player];
+
+            if (choice === 'crown' && playerObj.piecesInReserve > 0) {
+                piece.isCrowned = true;
+                playerObj.piecesInReserve--;
+                gameState.message = `The piece has been crowned!`;
+            } else if (choice === 'reinforce' && playerObj.piecesInReserve > 0 && direction) {
+                const opponentId = player === 'p1' ? 'p2' : 'p1';
+                const opponentCrownSpace = gameState.crownSpaces[opponentId];
+                
+                let placementCol;
+                if (direction === 'left') {
+                    placementCol = opponentCrownSpace.c - 1;
+                } else if (direction === 'right') {
+                    placementCol = opponentCrownSpace.c + 1;
+                }
+                
+                if (placementCol !== undefined) {
+                    const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
+                    gameState.pieces.push({ id: newId, owner: player, isCrowned: false, position: { r: opponentCrownSpace.row, c: placementCol } });
+                    gameState.board[opponentCrownSpace.row][placementCol] = newId;
+                    playerObj.piecesInReserve--;
+                    gameState.message = "A new piece has been placed from reserve!";
+                } else {
+                    // This is a fallback in case of an error, shouldn't happen with correct logic
+                    piece.isCrowned = true;
+                    playerObj.piecesInReserve--;
+                    gameState.message = "No valid space to reinforce, so the piece was crowned instead.";
+                }
+            } else {
+                 gameState.message = "No reserve action was taken.";
+            }
+            gameState.gamePhase = 'PLAYING';
+            gameState.pieceToCrownId = null;
+            endTurn();
+        }
+
+        function checkForWin() {
+            // ... (unchanged)
+            if (gameState.pieces.filter(p => p.owner === 'p1').length === 0) { setWinner('p2', 'The Bot eliminated all of your pieces!'); return true; }
+            if (gameState.pieces.filter(p => p.owner === 'p2').length === 0) { setWinner('p1', 'You eliminated all opponent pieces!'); return true; }
+            if (gameState.pieces.filter(p => p.owner === 'p1' && p.isCrowned).length >= 4) { setWinner('p1', 'You have 4 crowned pieces!'); return true; }
+            if (gameState.pieces.filter(p => p.owner === 'p2' && p.isCrowned).length >= 4) { setWinner('p2', 'The Bot has 4 crowned pieces!'); return true; }
+            return false;
+        }
+
+        function setWinner(winner, message) {
+            // ... (unchanged)
+            gameState.gamePhase = 'GAME_OVER';
+            gameState.winner = winner;
+            document.body.classList.add('game-over'); 
+
+            const modal = getEl('victoryModal');
+            getEl('victoryTitle').textContent = winner === 'p1' ? 'VICTORY!' : 'DEFEAT!';
+            getEl('victoryMessage').textContent = message;
+
+            if (winner === 'p2') {
+                const animationContainer = getEl('loserAnimation');
+                animationContainer.style.display = 'block';
+                for (let i = 0; i < 50; i++) {
+                    const drop = document.createElement('div');
+                    drop.className = 'raindrop';
+                    drop.style.left = Math.random() * 100 + '%';
+                    drop.style.animationDelay = Math.random() * 2 + 's';
+                    drop.style.animationDuration = 0.5 + Math.random() * 0.5 + 's';
+                    animationContainer.appendChild(drop);
+                }
+            }
+            
+            const actions = getEl('victoryActions');
+            actions.innerHTML = '';
+            const button = document.createElement('button');
+            button.textContent = "Play Again?";
+            button.onclick = initializeGame;
+            actions.appendChild(button);
+            modal.classList.add('visible');
+            render();
+        }
+
+        function endTurn() {
+            // ... (unchanged)
+            gameState.selectedPieceId = null;
+            gameState.highlightedMoves = [];
+            gameState.highlightedAttacks = [];
+            gameState.actions = [];
+            
+            if (checkForWin()) return;
+
+            gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
+            gameState.message = `${gameState.turn === 'p1' ? 'Your' : "Bot's"} turn to move.`;
+            gameState.rollMessage = '';
+            render();
+            if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 2000);
+        }
+        
+        function botTurn() {
+            // ... (unchanged)
+            const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
+            let possibleActions = [];
+            myPieces.forEach(piece => {
+                const {r, c} = piece.position;
+                
+                const moveDirs = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                moveDirs.forEach(m => {
+                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isIllegalHomeRow('p2', m.r)) {
+                        possibleActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c });
+                    }
+                });
+
+                const attackDirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+                for (const dir of attackDirs) {
+                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
+                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
+                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
+                    
+                    const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && 
+                                           !getPieceAt(landingPos.r, landingPos.c) && 
+                                           !isIllegalHomeRow('p2', landingPos.r);
+
+                    if(targetPiece && targetPiece.owner === 'p1' && isValidLanding){
+                        possibleActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos });
+                    }
+                }
+            });
+
+            if (possibleActions.length > 0) {
+                const attackActions = possibleActions.filter(a => a.type === 'attack');
+                const moveActions = possibleActions.filter(a => a.type === 'move');
+                
+                const chosenAction = attackActions.length > 0 
+                    ? attackActions[Math.floor(Math.random() * attackActions.length)] 
+                    : moveActions[Math.floor(Math.random() * moveActions.length)];
+                
+                if (chosenAction.type === 'move') {
+                    executeMove(chosenAction.pieceId, chosenAction.r, chosenAction.c);
+                } else { 
+                    gameState.pendingAttack = chosenAction; 
+                    executeAttack(); 
+                }
+            } else { 
+                gameState.message = "Bot has no valid moves."; 
+                setTimeout(endTurn, 1500); 
+            }
+        }
+
+        function showDiceRoll(rollsNeeded, title, calculateSuccesses = true, attackerId) {
+            // ... (unchanged)
+            return new Promise(resolve => {
+                const modal = getEl('dice-modal');
+                const svg = getEl('dice-svg');
+                const text = svg.querySelector('.text');
+                getEl('dice-title').textContent = title || 'Rolling...';
+                const resultsEl = getEl('dice-results');
+                resultsEl.innerHTML = '';
+
+                modal.classList.add('visible');
+                svg.classList.add('rolling');
+                let tumbleInterval = setInterval(() => { text.textContent = Math.floor(Math.random() * 20) + 1; }, 60);
+
+                setTimeout(() => {
+                    clearInterval(tumbleInterval);
+                    svg.classList.remove('rolling');
+
+                    const rolls = Array(rollsNeeded).fill(0).map(() => rollD20());
+                    let successes = 0, defenderSuccesses = 0;
+                    
+                    if (calculateSuccesses) {
+                        const attackerDieType = gameState.players[attackerId].dieType;
+                        const defenderDieType = attackerDieType === 'even' ? 'odd' : 'even';
+                        
+                        successes = rolls.filter(r => (attackerDieType === 'even' && r % 2 === 0) || (attackerDieType === 'odd' && r % 2 !== 0)).length;
+                        defenderSuccesses = rolls.filter(r => (defenderDieType === 'even' && r % 2 === 0) || (defenderDieType === 'odd' && r % 2 !== 0)).length;
+                        
+                        let resultsText = `Rolls: ${rolls.join(', ')}`;
+                        resultsText += `<br> Attacker Successes: ${successes}`;
+                        if (rollsNeeded > 1) resultsText += `<br> Defender Successes: ${defenderSuccesses}`;
+                        resultsEl.innerHTML = resultsText;
+                    } else {
+                        resultsEl.innerHTML = `Roll: ${rolls[0]}`;
+                    }
+                    
+                    text.textContent = rolls[0];
+                    setTimeout(() => {
+                        modal.classList.remove('visible');
+                        resolve({ rolls, successes, defenderSuccesses });
+                    }, 2000);
+                }, 1000);
+            });
+        }
+
+        gameBoardElement.addEventListener('click', handleBoardClick);
+        initializeGame();
+    </script>
+</body>
+</html>
