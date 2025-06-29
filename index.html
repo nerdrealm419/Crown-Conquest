@@ -11,7 +11,8 @@
             --background-color: #333;
             --panel-color: #444;
             --board-bg: #555;
-            --cell-bg: #ddd;
+            --cell-bg-light: #E0D8B0; /* Beige */
+            --cell-bg-dark: #B4B8AB;  /* Light Grey */
             --highlight-move: #a2d2ff;
             --highlight-attack: #ffafcc;
             --highlight-placement: #bde0fe;
@@ -28,8 +29,18 @@
         .captured-icon { width: 25px; height: 25px; border-radius: 50%; border: 2px solid black; }
         #game-center { position: relative; }
         #gameBoard { display: grid; grid-template-columns: repeat(7, 60px); grid-template-rows: repeat(5, 60px); border: 3px solid #666; background-color: var(--board-bg); gap: 2px; padding: 2px; border-radius: 5px; transition: opacity 0.5s; }
-        .cell { width: 60px; height: 60px; background-color: var(--cell-bg); display: flex; justify-content: center; align-items: center; box-sizing: border-box; border: 1px solid #777; position: relative; transition: background-color 0.2s; }
-        
+        .cell { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; border: 1px solid #777; position: relative; transition: background-color 0.2s; }
+
+        /* Checkerboard Pattern */
+        .cell:nth-child(odd) { background-color: var(--cell-bg-light); }
+        .cell:nth-child(even) { background-color: var(--cell-bg-dark); }
+        #gameBoard > .cell:nth-child(n+8):nth-child(-n+14):nth-child(odd),
+        #gameBoard > .cell:nth-child(n+22):nth-child(-n+28):nth-child(odd),
+        #gameBoard > .cell:nth-child(n+36):nth-child(-n+42):nth-child(odd) { background-color: var(--cell-bg-dark); }
+        #gameBoard > .cell:nth-child(n+8):nth-child(-n+14):nth-child(even),
+        #gameBoard > .cell:nth-child(n+22):nth-child(-n+28):nth-child(even),
+        #gameBoard > .cell:nth-child(n+36):nth-child(-n+42):nth-child(even) { background-color: var(--cell-bg-light); }
+
         .player-piece {
             width: 45px;
             height: 45px;
@@ -45,42 +56,31 @@
             transition: all 0.2s ease-in-out;
             position: relative;
         }
-        
+       
         .p1-piece { background-color: var(--p1-color); }
         .p2-piece { background-color: var(--p2-color); }
-
-        .crowned {
-            box-shadow: 0 0 15px gold;
-        }
+       
+        .crowned { box-shadow: 0 0 15px gold; }
         .crowned::after {
             content: '';
             position: absolute;
-            width: 80%;
-            height: 80%;
+            width: 80%; height: 80%;
             background-color: gold;
             border-radius: 50%;
             border: 2px solid #444;
             box-sizing: border-box;
-            top: 5px;
-            left: 50%;
+            top: 5px; left: 50%;
             transform: translateX(-50%);
             z-index: 1;
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
-        
-        .crown-icon {
-            font-size: 28px;
-            position: absolute;
-            text-shadow: 0 0 3px black;
-            pointer-events: none;
-            z-index: 2;
-        }
-
+       
+        .crown-icon { font-size: 28px; position: absolute; text-shadow: 0 0 3px black; pointer-events: none; z-index: 2; }
         .selected { border: 4px solid #3498db; transform: scale(1.1); }
-        .highlight-move { background-color: var(--highlight-move); }
-        .highlight-attack { background-color: var(--highlight-attack); }
-        .highlight-placement { background-color: var(--highlight-placement); border: 2px dashed #3498db; }
-        .player1-crown-spot, .player2-crown-spot { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👑</text></svg>'); background-size: 70%; background-repeat: no-repeat; background-position: center; background-color: #FFD700; opacity: 0.5; }
+        .highlight-move { background-color: var(--highlight-move) !important; }
+        .highlight-attack { background-color: var(--highlight-attack) !important; }
+        .highlight-placement { background-color: var(--highlight-placement) !important; border: 2px dashed #3498db; }
+        .player1-crown-spot, .player2-crown-spot { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👑</text></svg>'); background-size: 70%; background-repeat: no-repeat; background-position: center; opacity: 0.5; }
         #ui-panel { text-align: center; }
         #message { margin: 15px 0; font-size: 1.3em; color: #f1faee; font-weight: bold; min-height: 2em; }
         #rollDisplay { margin-top: 10px; font-size: 1.1em; font-weight: bold; min-height: 25px; color: #a8dadc; }
@@ -95,7 +95,7 @@
         .modal-content { background-color: var(--panel-color); padding: 30px; border: 2px solid gold; width: 80%; max-width: 500px; text-align: center; border-radius: 10px; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); position: relative; overflow: hidden; }
         .modal-content h2, .modal-content h3 { color: gold; }
         .modal-content p { font-size: 1.2em; }
-        
+       
         body.game-over #gameBoard { pointer-events: none; opacity: 0.6; }
         #loserAnimation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .loser-icon { font-size: 100px; color: #e63946; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
@@ -141,28 +141,11 @@
             <div id="p2_captured_display" class="captured-pieces-display"></div>
         </div>
     </div>
-    
-    <div id="dice-modal" class="modal">
-        <div id="dice-modal-content" class="modal-content">
-            <h3 id="dice-title">Rolling...</h3>
-            <div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div>
-            <div id="dice-results"></div>
-        </div>
-    </div>
-
-    <div id="victoryModal" class="modal">
-        <div id="victoryContent" class="modal-content">
-            <div id="loserAnimation" style="display: none;">
-                 <div class="loser-icon">😭</div>
-            </div>
-            <h2 id="victoryTitle"></h2>
-            <p id="victoryMessage"></p>
-            <div id="victoryActions"></div>
-        </div>
-    </div>
-    <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>Choose your action. You have <b id="crown-modal-reserve-count">X</b> pieces in reserve.</p><div id="crownChoiceActions"></div></div></div>
-    <!-- New Modal for Reinforcement Choice -->
-    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><div id="reinforceChoiceActions"></div></div></div>
+   
+    <div id="dice-modal" class="modal"><div id="dice-modal-content" class="modal-content"><h3 id="dice-title">Rolling...</h3><div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div><div id="dice-results"></div></div></div>
+    <div id="victoryModal" class="modal"><div id="victoryContent" class="modal-content"><div id="loserAnimation" style="display: none;"><div class="loser-icon">😭</div></div><h2 id="victoryTitle"></h2><p id="victoryMessage"></p><div id="victoryActions"></div></div></div>
+    <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>You may Double-Stack this piece or place a Reinforcement from your reserve.</p><p>Reserve: <b id="crown-modal-reserve-count">X</b></p><div id="crownChoiceActions"></div></div></div>
+    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><p>Place a new piece to the left or right of your Crown Space.</p><div id="reinforceChoiceActions"></div></div></div>
 
     <script>
         const gameBoardElement = document.getElementById('gameBoard');
@@ -181,19 +164,18 @@
             return pieceId ? getPiece(pieceId) : null;
         };
         const isOutOfBounds = (r, c) => r < 0 || r >= gameState.boardSize.rows || c < 0 || c >= gameState.boardSize.cols;
-        
-        function isIllegalHomeRow(player, targetRow) {
-            const p1HomeRow = gameState.boardSize.rows - 1;
-            const p2HomeRow = 0;
-            if (player === 'p1' && targetRow === p1HomeRow) return true;
-            if (player === 'p2' && targetRow === p2HomeRow) return true;
-            return false;
+       
+        // Corrected Rule: A player cannot land on their own single CROWN SPACE. Other spaces on the home row are fine.
+        function isOwnCrownSpace(player, r, c) {
+            const ownCrown = gameState.crownSpaces[player];
+            return ownCrown.r === r && ownCrown.c === c;
         }
 
         function movePieceOnBoard(piece, newR, newC) {
             if (!piece) return;
-            if (isIllegalHomeRow(piece.owner, newR)) {
-                console.error(`CRITICAL ERROR: An illegal move to home row ${newR} was attempted for Player ${piece.owner} and blocked.`);
+            // Preventative check remains as a final safeguard.
+            if (isOwnCrownSpace(piece.owner, newR, newC)) {
+                console.error(`CRITICAL ERROR: An illegal move to crown space (${newR}, ${newC}) was attempted and blocked.`);
                 return;
             }
             const oldPos = piece.position;
@@ -202,27 +184,24 @@
             piece.position = { r: newR, c: newC };
         }
 
+        // --- All other functions up to initializeGame are correct and unchanged ---
         function render() {
-            // ... (render function is unchanged)
             const p1Color = gameState.players.p1.color || 'transparent';
             const p2Color = gameState.players.p2.color || 'transparent';
             document.documentElement.style.setProperty('--p1-color', p1Color);
             document.documentElement.style.setProperty('--p2-color', p2Color);
             getEl('p1_swatch').style.backgroundColor = p1Color;
             getEl('p2_swatch').style.backgroundColor = p2Color;
-
             const p1Panel = getEl('p1_panel');
             const p2Panel = getEl('p2_panel');
             p1Panel.classList.toggle('active-turn-panel', gameState.turn === 'p1');
             p2Panel.classList.toggle('active-turn-panel', gameState.turn === 'p2');
-            
             getEl('p1_header').textContent = `Player 1`;
             getEl('p2_header').textContent = `Player 2 (Bot)`;
             getEl('p1_die_type').textContent = gameState.players.p1.dieType || 'N/A';
             getEl('p2_die_type').textContent = gameState.players.p2.dieType || 'N/A';
             getEl('p1_reserve').textContent = gameState.players.p1.piecesInReserve;
             getEl('p2_reserve').textContent = gameState.players.p2.piecesInReserve;
-            
             const p1CapturedContainer = getEl('p1_captured_display');
             p1CapturedContainer.innerHTML = '';
             for (let i = 0; i < gameState.players.p1.capturedOpponentPieces; i++) {
@@ -231,7 +210,6 @@
                 capturedEl.style.backgroundColor = p2Color;
                 p1CapturedContainer.appendChild(capturedEl);
             }
-
             const p2CapturedContainer = getEl('p2_captured_display');
             p2CapturedContainer.innerHTML = '';
             for (let i = 0; i < gameState.players.p2.capturedOpponentPieces; i++) {
@@ -240,10 +218,8 @@
                 capturedEl.style.backgroundColor = p1Color;
                 p2CapturedContainer.appendChild(capturedEl);
             }
-
             messageElement.textContent = gameState.message;
             rollDisplayElement.textContent = gameState.rollMessage || '';
-
             gameBoardElement.innerHTML = '';
             for (let r = 0; r < gameState.boardSize.rows; r++) {
                 for (let c = 0; c < gameState.boardSize.cols; c++) {
@@ -253,11 +229,9 @@
                     cell.dataset.col = c;
                     if (r === gameState.crownSpaces.p1.row && c === gameState.crownSpaces.p1.col) cell.classList.add('player1-crown-spot');
                     if (r === gameState.crownSpaces.p2.row && c === gameState.crownSpaces.p2.col) cell.classList.add('player2-crown-spot');
-                    
                     if (gameState.highlightedMoves.some(m => m.r === r && m.c === c)) cell.classList.add('highlight-move');
                     if (gameState.highlightedAttacks.some(a => a.landing.r === r && a.landing.c === c)) cell.classList.add('highlight-attack');
                     if (gameState.highlightedPlacements.some(p => p.r === r && p.c === c)) cell.classList.add('highlight-placement');
-
                     const piece = getPieceAt(r, c);
                     if (piece) {
                         const pieceEl = document.createElement('div');
@@ -276,7 +250,6 @@
                     gameBoardElement.appendChild(cell);
                 }
             }
-
             setupChoicesElement.innerHTML = '';
             if (gameState.gamePhase === 'SETUP_CHOICE') {
                 const colors = ['#2a9d8f', '#e76f51'];
@@ -312,11 +285,9 @@
                 actionButtonsElement.appendChild(button);
             });
         }
-        
+       
         function handleBoardClick(event) {
-            // ... (unchanged)
             if (gameState.gamePhase === 'GAME_OVER') return;
-            
             const pieceEl = event.target.closest('[data-piece-id]');
             const cellEl = event.target.closest('[data-row]');
             if (gameState.gamePhase === 'PLAYING' && gameState.turn === 'p1') {
@@ -337,37 +308,35 @@
                 }
             }
         }
-        
+
         function initializeGame() {
-            // ... (unchanged)
             document.body.classList.remove('game-over');
             const loserAnimationContainer = getEl('loserAnimation');
             loserAnimationContainer.style.display = 'none';
-            loserAnimationContainer.innerHTML = '<div class="loser-icon">😭</div>'; 
+            loserAnimationContainer.innerHTML = '<div class="loser-icon">😭</div>';
 
             gameState = {
                 boardSize: { rows: 5, cols: 7 },
                 board: Array(5).fill(0).map(() => Array(7).fill(null)),
                 pieces: [],
                 players: {
-                    p1: { id: 'p1', color: null, dieType: null, piecesInReserve: 16, capturedOpponentPieces: 0 },
-                    p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 16, capturedOpponentPieces: 0 }
+                    p1: { id: 'p1', color: null, dieType: null, piecesInReserve: 12, capturedOpponentPieces: 0 },
+                    p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 12, capturedOpponentPieces: 0 }
                 },
                 crownSpaces: { p1: { row: 4, col: 3 }, p2: { row: 0, col: 3 } },
                 turn: null, gamePhase: 'SETUP_D20_ROLL', winner: null,
-                message: "Let's begin! Roll to see who goes first.",
+                message: "Let's begin! Roll to start the game.",
                 rollMessage: '', selectedPieceId: null,
                 highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [],
                 pendingAttack: null, pendingChainJump: null, pieceToCrownId: null,
-                actions: [{ text: 'Roll for Initiative', onClick: setupRollOff }]
+                actions: [{ text: 'Roll to Start Game', onClick: setupRollOff }]
             };
             getEl('victoryModal').classList.remove('visible');
             getEl('crownChoiceModal').classList.remove('visible');
             getEl('reinforceChoiceModal').classList.remove('visible');
             render();
         }
-        
-        // ... (All functions from setupRollOff to selectPiece are unchanged)
+       
         async function setupRollOff() {
             gameState.actions = [];
             render();
@@ -394,7 +363,7 @@
                 startPlacementPhase(firstPlayer);
             } else {
                 gameState.message = "It's a tie! Roll again.";
-                gameState.actions = [{ text: 'Roll for Initiative', onClick: setupRollOff }];
+                gameState.actions = [{ text: 'Roll to Start Game', onClick: setupRollOff }];
             }
             gameState.turn = firstPlayer;
             render();
@@ -434,19 +403,18 @@
             highlightPlacementSpots();
             render();
         }
-        
+       
         function highlightPlacementSpots() {
             gameState.highlightedPlacements = [];
             const player = gameState.placingPlayer;
             const startRow = player === 'p1' ? gameState.boardSize.rows - 1 : 0;
-            const crownCol = gameState.crownSpaces[player].col;
             for (let c = 0; c < gameState.boardSize.cols; c++) {
-                if (c !== crownCol && gameState.board[startRow][c] === null) {
+                if (!isOwnCrownSpace(player, startRow, c) && gameState.board[startRow][c] === null) {
                     gameState.highlightedPlacements.push({ r: startRow, c });
                 }
             }
         }
-        
+       
         function placeStartingPiece(r, c) {
             if (gameState.highlightedPlacements.some(p => p.r === r && p.c === c)) {
                 const newId = gameState.pieces.length + 1;
@@ -463,13 +431,12 @@
                 render();
             }
         }
-        
+       
         function placeBotStartingPieces() {
             const startRow = 0;
-            const crownCol = gameState.crownSpaces.p2.col;
             const validCols = [];
             for (let c = 0; c < gameState.boardSize.cols; c++) {
-                 if (c !== crownCol) {
+                 if (!isOwnCrownSpace('p2', startRow, c)) {
                     validCols.push(c);
                 }
             }
@@ -500,7 +467,7 @@
         }
 
         function selectPiece(pieceId) {
-            if (gameState.pendingChainJump || gameState.gamePhase !== 'PLAYING') return; 
+            if (gameState.pendingChainJump || gameState.gamePhase !== 'PLAYING') return;
             if (gameState.selectedPieceId === pieceId) {
                 gameState.selectedPieceId = null;
                 gameState.highlightedMoves = [];
@@ -510,30 +477,43 @@
                 gameState.selectedPieceId = pieceId;
                 const piece = getPiece(pieceId);
                 const {r, c} = piece.position;
-                
+               
+                // Highlight Moves
                 const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                gameState.highlightedMoves = moves.filter(m => 
-                    !isOutOfBounds(m.r, m.c) && 
-                    !getPieceAt(m.r, m.c) && 
-                    !isIllegalHomeRow(piece.owner, m.r)
-                );
-                
+                gameState.highlightedMoves = moves.filter(m => {
+                    const opponentId = piece.owner === 'p1' ? 'p2' : 'p1';
+                    const opponentCrownSpace = gameState.crownSpaces[opponentId];
+                    // Rule: Cannot re-enter opponent's crown space if already crowned
+                    if (piece.isCrowned && m.r === opponentCrownSpace.r && m.c === opponentCrownSpace.c) {
+                        return false;
+                    }
+                    return !isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c);
+                });
+               
+                // Highlight Attacks
                 const attacks = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
                 gameState.highlightedAttacks = [];
                 for (const attackDir of attacks) {
                     const targetPos = {r: r + attackDir.dr, c: c + attackDir.dc};
                     const landingPos = {r: r + attackDir.dr * 2, c: c + attackDir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                    
-                    const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && 
-                                           !getPieceAt(landingPos.r, landingPos.c) && 
-                                           !isIllegalHomeRow(piece.owner, landingPos.r);
+                   
+                    const opponentId = piece.owner === 'p1' ? 'p2' : 'p1';
+                    const opponentCrownSpace = gameState.crownSpaces[opponentId];
+                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) &&
+                                           !getPieceAt(landingPos.r, landingPos.c) &&
+                                           !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
+
+                    // Rule: Cannot re-enter opponent's crown space if already crowned
+                    if (piece.isCrowned && landingPos.r === opponentCrownSpace.r && landingPos.c === opponentCrownSpace.c) {
+                        isValidLanding = false;
+                    }
 
                     if (targetPiece && targetPiece.owner !== piece.owner && isValidLanding) {
                         gameState.highlightedAttacks.push({ target: targetPos, landing: landingPos, dir: attackDir });
                     }
                 }
-                
+               
                 gameState.actions = [];
                 if (piece.isCrowned && gameState.highlightedAttacks.length > 0) {
                      gameState.actions.push({ text: 'Declare Chain Jump', onClick: () => declareChainJump() });
@@ -541,9 +521,8 @@
             }
             render();
         }
-        
+       
         function declareChainJump() {
-            // ... (unchanged)
             if (!gameState.selectedPieceId) return;
             const piece = getPiece(gameState.selectedPieceId);
             if (!piece.isCrowned || gameState.highlightedAttacks.length === 0) return;
@@ -558,7 +537,6 @@
         }
 
         function declareMoveOrAttack(r, c) {
-            // ... (unchanged)
             const attack = gameState.highlightedAttacks.find(a => a.landing.r === r && a.landing.c === c);
             const move = gameState.highlightedMoves.find(m => m.r === r && m.c === c);
 
@@ -583,12 +561,11 @@
             }
             render();
         }
-        
+       
         function executeMove(pieceId, r, c) {
-            // ... (unchanged)
             const piece = getPiece(pieceId);
             movePieceOnBoard(piece, r, c);
-            
+           
             const opponentId = piece.owner === 'p1' ? 'p2' : 'p1';
             const opponentCrownSpace = gameState.crownSpaces[opponentId];
 
@@ -598,9 +575,9 @@
                 endTurn();
             }
         }
-
+       
+        // Corrected Attack Roll Logic
         async function executeAttack() {
-            // ... (unchanged)
             const isChainJump = !!gameState.pendingChainJump;
             const attackData = isChainJump ? gameState.pendingChainJump : gameState.pendingAttack;
             if (!attackData) return;
@@ -612,15 +589,16 @@
 
             const attacker = getPiece(pieceId);
             const defender = getPieceAt(targetPos.r, targetPos.c);
-            let numRolls = 1;
+           
+            let numRolls = 1; // Default
             if (attacker.isCrowned && defender.isCrowned) numRolls = 7;
             else if (!attacker.isCrowned && defender.isCrowned) numRolls = 3;
-            else if (attacker.isCrowned && !defender.isCrowned) numRolls = 1; 
-            
+            // The case of Crowned vs Standard (numRolls = 1) is handled by the default
+           
             const result = await showDiceRoll(numRolls, `${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} Attacking...`, true, attacker.owner);
             const { successes, defenderSuccesses } = result;
 
-            if (isChainJump) { 
+            if (isChainJump) {
                 if (successes >= 1) {
                     resolveChainJump(attackData);
                 } else {
@@ -633,16 +611,16 @@
 
             let attackSucceeded = false;
             let message = "";
-            
+           
             if (!attacker.isCrowned && !defender.isCrowned) {
-                if (successes >= 1) { attackSucceeded = true; message = "Attack successful!"; } 
+                if (successes >= 1) { attackSucceeded = true; message = "Attack successful!"; }
                 else { message = "Attack failed!"; }
             } else if (!attacker.isCrowned && defender.isCrowned) {
-                if (successes >= 2) { 
-                    defender.isCrowned = false; 
-                    message = "Attack successful! Defender is uncrowned."; 
-                } else { 
-                    message = "Attack failed! Defender is safe."; 
+                if (successes >= 2) {
+                    defender.isCrowned = false;
+                    message = "Attack successful! Defender is uncrowned.";
+                } else {
+                    message = "Attack failed! Defender is safe.";
                 }
             } else if (attacker.isCrowned && defender.isCrowned) {
                 if (successes >= 4) {
@@ -650,12 +628,12 @@
                     message = "Crowned attack successful! Defender is uncrowned.";
                 } else if (defenderSuccesses >= 4) {
                     attacker.isCrowned = false;
-                    message = "Crowned attack FAILED! Defender wins the roll-off. Your piece is uncrowned.";
+                    message = "Crowned attack FAILED! Defender wins. Your piece is uncrowned.";
                 } else {
                     message = `Roll-off is a draw (${successes} to ${defenderSuccesses}). No pieces are changed.`;
                 }
             } else if (attacker.isCrowned && !defender.isCrowned) {
-                if (successes >= 1) { attackSucceeded = true; message = "Crowned attack successful!"; } 
+                if (successes >= 1) { attackSucceeded = true; message = "Crowned attack successful!"; }
                 else { message = "Crowned attack failed!"; }
             }
 
@@ -679,7 +657,6 @@
         }
 
         function resolveChainJump(attackData) {
-            // ... (unchanged)
             const { pieceId, targetPos, landingPos, dir } = attackData;
             const attacker = getPiece(pieceId);
             const defender = getPieceAt(targetPos.r, targetPos.c);
@@ -687,17 +664,15 @@
             gameState.players[attacker.owner].capturedOpponentPieces++;
             gameState.board[targetPos.r][targetPos.c] = null;
             gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
-            
             gameState.board[attacker.position.r][attacker.position.c] = null;
             attacker.isCrowned = false;
-            
             movePieceOnBoard(attacker, landingPos.r, landingPos.c);
-            
+           
             const secondLandingPos = { r: landingPos.r + dir.dr, c: landingPos.c + dir.dc };
-            const isSecondJumpBlocked = isOutOfBounds(secondLandingPos.r, secondLandingPos.c) || 
+            const isSecondJumpBlocked = isOutOfBounds(secondLandingPos.r, secondLandingPos.c) ||
                                        getPieceAt(secondLandingPos.r, secondLandingPos.c) ||
-                                       isIllegalHomeRow(attacker.owner, secondLandingPos.r);
-            
+                                       isOwnCrownSpace(attacker.owner, secondLandingPos.r, secondLandingPos.c);
+           
             let newPieceId = null;
             if (isSecondJumpBlocked) {
                  gameState.message = "Chain jump successful, but the second jump was blocked!";
@@ -707,11 +682,10 @@
                 gameState.board[secondLandingPos.r][secondLandingPos.c] = newPieceId;
                 gameState.message = "Chain jump successful! The piece has split.";
             }
-            
+           
             gameState.pendingChainJump = null;
             const opponentId = attacker.owner === 'p1' ? 'p2' : 'p1';
             const opponentCrownSpace = gameState.crownSpaces[opponentId];
-
             if (landingPos.r === opponentCrownSpace.r && landingPos.c === opponentCrownSpace.c) {
                 enterCrowningPhase(attacker.id);
             } else if (newPieceId && secondLandingPos.r === opponentCrownSpace.r && secondLandingPos.c === opponentCrownSpace.c) {
@@ -720,15 +694,19 @@
                 setTimeout(endTurn, 2500);
             }
         }
-        
-        // ===== NEW REINFORCEMENT CHOICE FUNCTION =====
-        function promptReinforceChoice(leftFree, rightFree) {
+       
+        function promptReinforceChoice() {
             getEl('crownChoiceModal').classList.remove('visible');
             const reinforceModal = getEl('reinforceChoiceModal');
             const actionsContainer = getEl('reinforceChoiceActions');
             actionsContainer.innerHTML = '';
+           
+            const player = gameState.turn;
+            const ownCrownSpace = gameState.crownSpaces[player];
+            const leftSpotFree = !isOutOfBounds(ownCrownSpace.r, ownCrownSpace.c - 1) && !getPieceAt(ownCrownSpace.r, ownCrownSpace.c - 1);
+            const rightSpotFree = !isOutOfBounds(ownCrownSpace.r, ownCrownSpace.c + 1) && !getPieceAt(ownCrownSpace.r, ownCrownSpace.c + 1);
 
-            if (leftFree) {
+            if (leftSpotFree) {
                 const leftButton = document.createElement('button');
                 leftButton.textContent = "Place Left";
                 leftButton.onclick = () => {
@@ -737,7 +715,7 @@
                 };
                 actionsContainer.appendChild(leftButton);
             }
-            if (rightFree) {
+            if (rightSpotFree) {
                 const rightButton = document.createElement('button');
                 rightButton.textContent = "Place Right";
                 rightButton.onclick = () => {
@@ -746,25 +724,23 @@
                 };
                 actionsContainer.appendChild(rightButton);
             }
+            if (!leftSpotFree && !rightSpotFree) {
+                actionsContainer.innerHTML = "<p>No available space to place a reinforcement.</p>";
+                setTimeout(() => {
+                    reinforceModal.classList.remove('visible');
+                    endTurn();
+                }, 2000);
+            }
             reinforceModal.classList.add('visible');
         }
 
-        // ===== UPDATED FOR REINFORCEMENT CHOICE =====
         function enterCrowningPhase(pieceId) {
             gameState.gamePhase = 'AWAITING_CROWNING_CHOICE';
             gameState.pieceToCrownId = pieceId;
-            const piece = getPiece(pieceId);
-            const player = piece.owner;
+            const player = getPiece(pieceId).owner;
             const playerObj = gameState.players[player];
             const hasReserves = playerObj.piecesInReserve > 0;
-            
-            const opponentId = player === 'p1' ? 'p2' : 'p1';
-            const opponentCrownSpace = gameState.crownSpaces[opponentId];
-            
-            const leftSpotFree = !isOutOfBounds(opponentCrownSpace.r, opponentCrownSpace.c - 1) && !getPieceAt(opponentCrownSpace.r, opponentCrownSpace.c - 1);
-            const rightSpotFree = !isOutOfBounds(opponentCrownSpace.r, opponentCrownSpace.c + 1) && !getPieceAt(opponentCrownSpace.r, opponentCrownSpace.c + 1);
-            const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
-            
+           
             gameState.message = `${player === 'p1' ? 'You have' : 'Bot has'} reached the opponent's crown space!`;
             gameState.actions = [];
             render();
@@ -774,19 +750,19 @@
                 const actionsContainer = getEl('crownChoiceActions');
                 actionsContainer.innerHTML = '';
                 getEl('crown-modal-reserve-count').textContent = playerObj.piecesInReserve;
-                
+               
                 const crownButton = document.createElement('button');
-                crownButton.textContent = "Crown Piece";
+                crownButton.textContent = "Double-Stack";
                 crownButton.onclick = () => { crownModal.classList.remove('visible'); resolveCrowning('crown'); };
                 crownButton.disabled = !hasReserves;
                 actionsContainer.appendChild(crownButton);
 
                 const reinforceButton = document.createElement('button');
                 reinforceButton.textContent = "Place Reinforcement";
-                reinforceButton.onclick = () => promptReinforceChoice(leftSpotFree, rightSpotFree);
-                reinforceButton.disabled = !canReinforce;
+                reinforceButton.onclick = () => promptReinforceChoice();
+                reinforceButton.disabled = !hasReserves;
                 actionsContainer.appendChild(reinforceButton);
-                
+               
                 if (!hasReserves) {
                     const noActionInfo = document.createElement('p');
                     noActionInfo.textContent = "You have no pieces in reserve to take an action.";
@@ -795,8 +771,12 @@
                 }
                 crownModal.classList.add('visible');
             } else {
-                // Bot Logic for choosing action and direction
                 setTimeout(() => {
+                    const ownCrownSpace = gameState.crownSpaces.p2;
+                    const leftSpotFree = !getPieceAt(ownCrownSpace.r, ownCrownSpace.c - 1);
+                    const rightSpotFree = !getPieceAt(ownCrownSpace.r, ownCrownSpace.c + 1);
+                    const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
+                   
                     if (canReinforce) {
                         const availableDirections = [];
                         if (leftSpotFree) availableDirections.push('left');
@@ -812,40 +792,25 @@
             }
         }
 
-        // ===== UPDATED FOR REINFORCEMENT CHOICE =====
         function resolveCrowning(choice, direction = null) {
             const piece = getPiece(gameState.pieceToCrownId);
             if (!piece) { endTurn(); return; }
             const player = piece.owner;
             const playerObj = gameState.players[player];
 
-            if (choice === 'crown' && playerObj.piecesInReserve > 0) {
+            if (choice === 'crown') {
                 piece.isCrowned = true;
                 playerObj.piecesInReserve--;
-                gameState.message = `The piece has been crowned!`;
-            } else if (choice === 'reinforce' && playerObj.piecesInReserve > 0 && direction) {
-                const opponentId = player === 'p1' ? 'p2' : 'p1';
-                const opponentCrownSpace = gameState.crownSpaces[opponentId];
-                
-                let placementCol;
-                if (direction === 'left') {
-                    placementCol = opponentCrownSpace.c - 1;
-                } else if (direction === 'right') {
-                    placementCol = opponentCrownSpace.c + 1;
-                }
-                
-                if (placementCol !== undefined) {
-                    const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
-                    gameState.pieces.push({ id: newId, owner: player, isCrowned: false, position: { r: opponentCrownSpace.row, c: placementCol } });
-                    gameState.board[opponentCrownSpace.row][placementCol] = newId;
-                    playerObj.piecesInReserve--;
-                    gameState.message = "A new piece has been placed from reserve!";
-                } else {
-                    // This is a fallback in case of an error, shouldn't happen with correct logic
-                    piece.isCrowned = true;
-                    playerObj.piecesInReserve--;
-                    gameState.message = "No valid space to reinforce, so the piece was crowned instead.";
-                }
+                gameState.message = `${player === 'p1' ? 'Your' : "The Bot's"} piece has been Double-Stacked!`;
+            } else if (choice === 'reinforce' && direction) {
+                const ownCrownSpace = gameState.crownSpaces[player];
+                const placementCol = direction === 'left' ? ownCrownSpace.c - 1 : ownCrownSpace.c + 1;
+               
+                const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
+                gameState.pieces.push({ id: newId, owner: player, isCrowned: false, position: { r: ownCrownSpace.row, c: placementCol } });
+                gameState.board[ownCrownSpace.row][placementCol] = newId;
+                playerObj.piecesInReserve--;
+                gameState.message = `${player === 'p1' ? 'You' : "The Bot"} placed a reinforcement to the ${direction} of ${player === 'p1' ? 'your' : "its"} crown.`;
             } else {
                  gameState.message = "No reserve action was taken.";
             }
@@ -855,7 +820,6 @@
         }
 
         function checkForWin() {
-            // ... (unchanged)
             if (gameState.pieces.filter(p => p.owner === 'p1').length === 0) { setWinner('p2', 'The Bot eliminated all of your pieces!'); return true; }
             if (gameState.pieces.filter(p => p.owner === 'p2').length === 0) { setWinner('p1', 'You eliminated all opponent pieces!'); return true; }
             if (gameState.pieces.filter(p => p.owner === 'p1' && p.isCrowned).length >= 4) { setWinner('p1', 'You have 4 crowned pieces!'); return true; }
@@ -864,10 +828,9 @@
         }
 
         function setWinner(winner, message) {
-            // ... (unchanged)
             gameState.gamePhase = 'GAME_OVER';
             gameState.winner = winner;
-            document.body.classList.add('game-over'); 
+            document.body.classList.add('game-over');
 
             const modal = getEl('victoryModal');
             getEl('victoryTitle').textContent = winner === 'p1' ? 'VICTORY!' : 'DEFEAT!';
@@ -885,7 +848,7 @@
                     animationContainer.appendChild(drop);
                 }
             }
-            
+           
             const actions = getEl('victoryActions');
             actions.innerHTML = '';
             const button = document.createElement('button');
@@ -897,12 +860,11 @@
         }
 
         function endTurn() {
-            // ... (unchanged)
             gameState.selectedPieceId = null;
             gameState.highlightedMoves = [];
             gameState.highlightedAttacks = [];
             gameState.actions = [];
-            
+           
             if (checkForWin()) return;
 
             gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
@@ -911,30 +873,33 @@
             render();
             if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 2000);
         }
-        
+       
         function botTurn() {
-            // ... (unchanged)
             const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
             let possibleActions = [];
             myPieces.forEach(piece => {
                 const {r, c} = piece.position;
-                
-                const moveDirs = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                moveDirs.forEach(m => {
-                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isIllegalHomeRow('p2', m.r)) {
+               
+                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                moves.forEach(m => {
+                    const opponentCrownSpace = gameState.crownSpaces.p1;
+                     if (piece.isCrowned && m.r === opponentCrownSpace.r && m.c === opponentCrownSpace.c) return;
+                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace('p2', m.r, m.c)) {
                         possibleActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c });
                     }
                 });
 
-                const attackDirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
-                for (const dir of attackDirs) {
+                const attacks = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+                for (const dir of attacks) {
                     const targetPos = {r: r + dir.dr, c: c + dir.dc};
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                    
-                    const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && 
-                                           !getPieceAt(landingPos.r, landingPos.c) && 
-                                           !isIllegalHomeRow('p2', landingPos.r);
+                   
+                    const opponentCrownSpace = gameState.crownSpaces.p1;
+                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) &&
+                                           !getPieceAt(landingPos.r, landingPos.c) &&
+                                           !isOwnCrownSpace('p2', landingPos.r, landingPos.c);
+                    if (piece.isCrowned && landingPos.r === opponentCrownSpace.r && landingPos.c === opponentCrownSpace.c) isValidLanding = false;
 
                     if(targetPiece && targetPiece.owner === 'p1' && isValidLanding){
                         possibleActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos });
@@ -945,25 +910,23 @@
             if (possibleActions.length > 0) {
                 const attackActions = possibleActions.filter(a => a.type === 'attack');
                 const moveActions = possibleActions.filter(a => a.type === 'move');
-                
-                const chosenAction = attackActions.length > 0 
-                    ? attackActions[Math.floor(Math.random() * attackActions.length)] 
+                const chosenAction = attackActions.length > 0
+                    ? attackActions[Math.floor(Math.random() * attackActions.length)]
                     : moveActions[Math.floor(Math.random() * moveActions.length)];
-                
+               
                 if (chosenAction.type === 'move') {
                     executeMove(chosenAction.pieceId, chosenAction.r, chosenAction.c);
-                } else { 
-                    gameState.pendingAttack = chosenAction; 
-                    executeAttack(); 
+                } else {
+                    gameState.pendingAttack = chosenAction;
+                    executeAttack();
                 }
-            } else { 
-                gameState.message = "Bot has no valid moves."; 
-                setTimeout(endTurn, 1500); 
+            } else {
+                gameState.message = "Bot has no valid moves.";
+                setTimeout(endTurn, 1500);
             }
         }
 
         function showDiceRoll(rollsNeeded, title, calculateSuccesses = true, attackerId) {
-            // ... (unchanged)
             return new Promise(resolve => {
                 const modal = getEl('dice-modal');
                 const svg = getEl('dice-svg');
@@ -971,38 +934,34 @@
                 getEl('dice-title').textContent = title || 'Rolling...';
                 const resultsEl = getEl('dice-results');
                 resultsEl.innerHTML = '';
-
                 modal.classList.add('visible');
                 svg.classList.add('rolling');
                 let tumbleInterval = setInterval(() => { text.textContent = Math.floor(Math.random() * 20) + 1; }, 60);
-
                 setTimeout(() => {
                     clearInterval(tumbleInterval);
                     svg.classList.remove('rolling');
-
                     const rolls = Array(rollsNeeded).fill(0).map(() => rollD20());
                     let successes = 0, defenderSuccesses = 0;
-                    
                     if (calculateSuccesses) {
                         const attackerDieType = gameState.players[attackerId].dieType;
-                        const defenderDieType = attackerDieType === 'even' ? 'odd' : 'even';
-                        
+                        const defenderId = attackerId === 'p1' ? 'p2' : 'p1';
+                        const defenderDieType = gameState.players[defenderId].dieType;
                         successes = rolls.filter(r => (attackerDieType === 'even' && r % 2 === 0) || (attackerDieType === 'odd' && r % 2 !== 0)).length;
-                        defenderSuccesses = rolls.filter(r => (defenderDieType === 'even' && r % 2 === 0) || (defenderDieType === 'odd' && r % 2 !== 0)).length;
-                        
+                        if(numRolls > 1) { // Only calculate defender successes in a roll-off
+                            defenderSuccesses = rolls.filter(r => (defenderDieType === 'even' && r % 2 === 0) || (defenderDieType === 'odd' && r % 2 !== 0)).length;
+                        }
                         let resultsText = `Rolls: ${rolls.join(', ')}`;
                         resultsText += `<br> Attacker Successes: ${successes}`;
-                        if (rollsNeeded > 1) resultsText += `<br> Defender Successes: ${defenderSuccesses}`;
+                        if (numRolls > 1) resultsText += `<br> Defender Successes: ${defenderSuccesses}`;
                         resultsEl.innerHTML = resultsText;
                     } else {
                         resultsEl.innerHTML = `Roll: ${rolls[0]}`;
                     }
-                    
                     text.textContent = rolls[0];
                     setTimeout(() => {
                         modal.classList.remove('visible');
                         resolve({ rolls, successes, defenderSuccesses });
-                    }, 2000);
+                    }, 2500);
                 }, 1000);
             });
         }
