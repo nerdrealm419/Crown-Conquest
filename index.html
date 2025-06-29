@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crownfall (Official Rules)</title>
+    <style>
+        :root {
+            --p1-color: #2a9d8f; /* Teal */
+            --p2-color: #e76f51; /* Orange */
+            --background-color: #333;
+            --panel-color: #444;
+            --board-bg: #555;
+            --cell-bg: #ddd;
+            --highlight-move: #a2d2ff;
+            --highlight-attack: #ffafcc;
+            --highlight-placement: #bde0fe;
+            --text-light: #eee;
+            --text-dark: #1d3557;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--background-color); color: var(--text-light); margin: 0; flex-direction: column; }
+        .game-container { display: flex; gap: 30px; align-items: flex-start; }
+        .info-panel { width: 220px; text-align: center; padding: 10px; background-color: var(--panel-color); border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); border: 3px solid transparent; transition: all 0.3s ease-in-out; }
+        .active-turn-panel { border: 3px solid gold; box-shadow: 0 0 20px gold; transform: scale(1.02); }
+        .info-panel h2 { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0; }
+        .color-swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; }
+        .captured-pieces-display { margin-top: 10px; padding-top: 10px; border-top: 1px solid #666; min-height: 60px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center;}
+        .captured-icon { width: 25px; height: 25px; border-radius: 50%; border: 2px solid black; }
+        #game-center { position: relative; }
+        #gameBoard { display: grid; grid-template-columns: repeat(7, 60px); grid-template-rows: repeat(5, 60px); border: 3px solid #666; background-color: var(--board-bg); gap: 2px; padding: 2px; border-radius: 5px; transition: opacity 0.5s; }
+        .cell { width: 60px; height: 60px; background-color: var(--cell-bg); display: flex; justify-content: center; align-items: center; box-sizing: border-box; border: 1px solid #777; position: relative; transition: background-color 0.2s; }
+        
+        .player-piece {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border: 3px solid black;
+            box-sizing: border-box;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+        
+        .p1-piece { background-color: var(--p1-color); }
+        .p2-piece { background-color: var(--p2-color); }
+
+        .crowned {
+            box-shadow: 0 0 15px gold;
+        }
+        .crowned::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            background-color: gold;
+            border-radius: 50%;
+            border: 2px solid #444;
+            box-sizing: border-box;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .crown-icon {
+            font-size: 28px;
+            position: absolute;
+            text-shadow: 0 0 3px black;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .selected { border: 4px solid #3498db; transform: scale(1.1); }
+        .highlight-move { background-color: var(--highlight-move); }
+        .highlight-attack { background-color: var(--highlight-attack); }
+        .highlight-placement { background-color: var(--highlight-placement); border: 2px dashed #3498db; }
+        .player1-crown-spot, .player2-crown-spot { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👑</text></svg>'); background-size: 70%; background-repeat: no-repeat; background-position: center; background-color: #FFD700; opacity: 0.5; }
+        #ui-panel { text-align: center; }
+        #message { margin: 15px 0; font-size: 1.3em; color: #f1faee; font-weight: bold; min-height: 2em; }
+        #rollDisplay { margin-top: 10px; font-size: 1.1em; font-weight: bold; min-height: 25px; color: #a8dadc; }
+        #setup-choices { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .choice-group { border: 1px solid #888; padding: 10px; border-radius: 5px; }
+        button { padding: 10px 20px; font-size: 1em; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background-color: #457b9d; color: white; transition: background-color 0.2s; }
+        button:hover { background-color: #a8dadc; color: var(--text-dark); }
+        button:disabled { background-color: #666; color: #999; cursor: not-allowed; }
+
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .modal.visible { display: flex; opacity: 1; }
+        .modal-content { background-color: var(--panel-color); padding: 30px; border: 2px solid gold; width: 80%; max-width: 500px; text-align: center; border-radius: 10px; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); position: relative; overflow: hidden; }
+        .modal-content h2, .modal-content h3 { color: gold; }
+        .modal-content p { font-size: 1.2em; }
+        
+        body.game-over #gameBoard { pointer-events: none; opacity: 0.6; }
+        #loserAnimation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        .loser-icon { font-size: 100px; color: #e63946; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .raindrop { position: absolute; bottom: 100%; width: 2px; height: 30px; background: linear-gradient(to bottom, rgba(173, 216, 230, 0), rgba(173, 216, 230, 0.6)); animation: fall linear infinite; z-index: 2;}
+        @keyframes fall { to { transform: translateY(200vh); } }
+
+        #dice-modal-content { text-align: center; }
+        #dice-container { margin-bottom: 20px; }
+        #dice-svg { width: 150px; height: 150px; }
+        #dice-svg .face { fill: #f1faee; stroke: #1d3557; stroke-width: 5; }
+        #dice-svg .text { font-size: 50px; font-weight: bold; fill: #e63946; text-anchor: middle; dominant-baseline: central; }
+        #dice-results { font-size: 1.2em; min-height: 1.5em; }
+        #crownChoiceContent h3, #reinforceChoiceContent h3 { font-size: 1.8em; margin-top: 0; color: #fff; }
+        #crownChoiceActions button, #reinforceChoiceActions button { margin: 10px; }
+
+        @keyframes roll-animation {
+            0% { transform: scale(0.5) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(540deg); }
+            100% { transform: scale(1) rotate(720deg); }
+        }
+        .rolling { animation: roll-animation 1s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="p1_panel" class="info-panel">
+            <h2><div id="p1_swatch" class="color-swatch"></div> <span id="p1_header"></span></h2>
+            <p>Die Type: <b id="p1_die_type"></b></p>
+            <p>Pieces in Reserve: <b id="p1_reserve"></b></p>
+            <p>Opponents Captured:</p>
+            <div id="p1_captured_display" class="captured-pieces-display"></div>
+        </div>
+        <div id="game-center">
+            <h1>Crownfall</h1>
+            <div id="gameBoard"></div>
+            <div id="ui-panel"><div id="message"></div><div id="rollDisplay"></div><div id="setup-choices"></div><div id="action-buttons"></div></div>
+        </div>
+        <div id="p2_panel" class="info-panel">
+            <h2><div id="p2_swatch" class="color-swatch"></div> <span id="p2_header"></span></h2>
+            <p>Die Type: <b id="p2_die_type"></b></p>
+            <p>Pieces in Reserve: <b id="p2_reserve"></b></p>
+            <p>Opponents Captured:</p>
+            <div id="p2_captured_display" class="captured-pieces-display"></div>
+        </div>
+    </div>
+    
+    <div id="dice-modal" class="modal">
+        <div id="dice-modal-content" class="modal-content">
+            <h3 id="dice-title">Rolling...</h3>
+            <div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div>
+            <div id="dice-results"></div>
+        </div>
+    </div>
+
+    <div id="victoryModal" class="modal">
+        <div id="victoryContent" class="modal-content">
+            <div id="loserAnimation" style="display: none;">
+                 <div class="loser-icon">😭</div>
+            </div>
+            <h2 id="victoryTitle"></h2>
+            <p id="victoryMessage"></p>
+            <div id="victoryActions"></div>
+        </div>
+    </div>
+    <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>Choose your action. You have <b id="crown-modal-reserve-count">X</b> pieces in reserve.</p><div id="crownChoiceActions"></div></div></div>
+    <!-- New Modal for Reinforcement Choice -->
+    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><div id="reinforceChoiceActions"></div></div></div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const messageElement = document.getElementById('message');
+        const rollDisplayElement = document.getElementById('rollDisplay');
+        const actionButtonsElement = document.getElementById('action-buttons');
+        const setupChoicesElement = document.getElementById('setup-choices');
+        let gameState = {};
+
+        const getEl = (id) => document.getElementById(id);
+        const rollD20 = () => Math.floor(Math.random() * 20) + 1;
+        const getPiece = (id) => gameState.pieces.find(p => p.id === id);
+        const getPieceAt = (r, c) => {
+            if (isOutOfBounds(r,c)) return null;
+            const pieceId = gameState.board[r][c];
+            return pieceId ? getPiece(pieceId) : null;
+        };
+        const isOutOfBounds = (r, c) => r < 0 || r >= gameState.boardSize.rows || c < 0 || c >= gameState.boardSize.cols;
+        
+        function isIllegalHomeRow(player, targetRow) {
+            const p1HomeRow = gameState.boardSize.rows - 1;
+            const p2HomeRow = 0;
+            if (player === 'p1' && targetRow === p1HomeRow) return true;
+            if (player === 'p2' && targetRow === p2HomeRow) return true;
+            return false;
+        }
+
+        function movePieceOnBoard(piece, newR, newC) {
+            if (!piece) return;
+            if (isIllegalHomeRow(piece.owner, newR)) {
+                console.error(`CRITICAL ERROR: An illegal move to home row ${newR} was attempted for Player ${piece.owner} and blocked.`);
+                return;
+            }
+            const oldPos = piece.position;
+            gameState.board[oldPos.r][oldPos.c] = null;
+            gameState.board[newR][newC] = piece.id;
+            piece.position = { r: newR, c: newC };
+        }
+
+        function render() {
+            // ... (render function is unchanged)
+            const p1Color = gameState.players.p1.color || 'transparent';
+            const p2Color = gameState.players.p2.color || 'transparent';
+            document.documentElement.style.setProperty('--p1-color', p1Color);
+            document.documentElement.style.setProperty('--p2-color', p2Color);
+            getEl('p1_swatch').style.backgroundColor = p1Color;
+            getEl('p2_swatch').style.backgroundColor = p2Color;
+
+            const p1Panel = getEl('p1_panel');
+            const p2Panel = getEl('p2_panel');
+            p1Panel.classList.toggle('active-turn-panel', gameState.turn === 'p1');
+            p2Panel.classList.toggle('active-turn-panel', gameState.turn === 'p2');
+            
+            getEl('p1_header').textContent = `Player 1`;
+            getEl('p2_header').textContent = `Player 2 (Bot)`;
+            getEl('p1_die_type').textContent = gameState.players.p1.dieType || 'N/A';
+            getEl('p2_die_type').textContent = gameState.players.p2.dieType || 'N/A';
+            getEl('p1_reserve').textContent = gameState.players.p1.piecesInReserve;
+            getEl('p2_reserve').textContent = gameState.players.p2.piecesInReserve;
+            
+            const p1CapturedContainer = getEl('p1_captured_display');
+            p1CapturedContainer.innerHTML = '';
+            for (let i = 0; i < gameState.players.p1.capturedOpponentPieces; i++) {
+                const capturedEl = document.createElement('div');
+                capturedEl.className = 'captured-icon';
+                capturedEl.style.backgroundColor = p2Color;
+                p1CapturedContainer.appendChild(capturedEl);
+            }
+
+            const p2CapturedContainer = getEl('p2_captured_display');
+            p2CapturedContainer.innerHTML = '';
+            for (let i = 0; i < gameState.players.p2.capturedOpponentPieces; i++) {
+                const capturedEl = document.createElement('div');
+                capturedEl.className = 'captured-icon';
+                capturedEl.style.backgroundColor = p1Color;
+                p2CapturedContainer.appendChild(capturedEl);
+            }
+
+            messageElement.textContent = gameState.message;
+            rollDisplayElement.textContent = gameState.rollMessage || '';
+
+            gameBoardElement.innerHTML = '';
+            for (let r = 0; r < gameState.boardSize.rows; r++) {
+                for (let c = 0; c < gameState.boardSize.cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    if (r === gameState.crownSpaces.p1.row && c === gameState.crownSpaces.p1.col) cell.classList.add('player1-crown-spot');
+                    if (r === gameState.crownSpaces.p2.row && c === gameState.crownSpaces.p2.col) cell.classList.add('player2-crown-spot');
+                    
+                    if (gameState.highlightedMoves.some(m => m.r === r && m.c === c)) cell.classList.add('highlight-move');
+                    if (gameState.highlightedAttacks.some(a => a.landing.r === r && a.landing.c === c)) cell.classList.add('highlight-attack');
+                    if (gameState.highlightedPlacements.some(p => p.r === r && p.c === c)) cell.classList.add('highlight-placement');
+
+                    const piece = getPieceAt(r, c);
+                    if (piece) {
+                        const pieceEl = document.createElement('div');
+                        pieceEl.classList.add('player-piece', piece.owner === 'p1' ? 'p1-piece' : 'p2-piece');
+                        pieceEl.dataset.pieceId = piece.id;
+                        if (piece.isCrowned) {
+                            pieceEl.classList.add('crowned');
+                            const crownIcon = document.createElement('div');
+                            crownIcon.classList.add('crown-icon');
+                            crownIcon.textContent = '👑';
+                            pieceEl.appendChild(crownIcon);
+                        }
+                        if (piece.id === gameState.selectedPieceId) pieceEl.classList.add('selected');
+                        cell.appendChild(pieceEl);
+                    }
+                    gameBoardElement.appendChild(cell);
+                }
+            }
+
+            setupChoicesElement.innerHTML = '';
+            if (gameState.gamePhase === 'SETUP_CHOICE') {
+                const colors = ['#2a9d8f', '#e76f51'];
+                if (!gameState.players.p1.color) {
+                    const group = document.createElement('div'); group.classList.add('choice-group');
+                    group.innerHTML = '<b>Choose Color:</b>';
+                    colors.forEach(color => {
+                        const button = document.createElement('button');
+                        button.textContent = color === '#2a9d8f' ? 'Teal' : 'Orange';
+                        button.onclick = () => chooseColor(color);
+                        group.appendChild(button);
+                    });
+                    setupChoicesElement.appendChild(group);
+                }
+                if (!gameState.players.p1.dieType) {
+                    const group = document.createElement('div'); group.classList.add('choice-group');
+                    group.innerHTML = '<b>Choose Die Type:</b>';
+                    ['Even', 'Odd'].forEach(type => {
+                        const button = document.createElement('button');
+                        button.textContent = type;
+                        button.onclick = () => chooseDieType(type.toLowerCase());
+                        group.appendChild(button);
+                    });
+                    setupChoicesElement.appendChild(group);
+                }
+            }
+            actionButtonsElement.innerHTML = '';
+            gameState.actions.forEach(action => {
+                const button = document.createElement('button');
+                button.textContent = action.text;
+                button.onclick = action.onClick;
+                button.disabled = action.disabled || false;
+                actionButtonsElement.appendChild(button);
+            });
+        }
+        
+        function handleBoardClick(event) {
+            // ... (unchanged)
+            if (gameState.gamePhase === 'GAME_OVER') return;
+            
+            const pieceEl = event.target.closest('[data-piece-id]');
+            const cellEl = event.target.closest('[data-row]');
+            if (gameState.gamePhase === 'PLAYING' && gameState.turn === 'p1') {
+                if (pieceEl) {
+                    const pieceId = parseInt(pieceEl.dataset.pieceId);
+                    const piece = getPiece(pieceId);
+                    if (piece.owner === 'p1') selectPiece(pieceId);
+                } else if (cellEl && gameState.selectedPieceId !== null) {
+                    const r = parseInt(cellEl.dataset.row);
+                    const c = parseInt(cellEl.dataset.col);
+                    declareMoveOrAttack(r, c);
+                }
+            } else if (gameState.gamePhase === 'SETUP_PLACEMENT') {
+                if (cellEl && gameState.placingPlayer === 'p1') {
+                    const r = parseInt(cellEl.dataset.row);
+                    const c = parseInt(cellEl.dataset.col);
+                    placeStartingPiece(r, c);
+                }
+            }
+        }
+        
+        function initializeGame() {
+            // ... (unchanged)
+            document.body.classList.remove('game-over');
+            const loserAnimationContainer = getEl('loserAnimation');
+            loserAnimationContainer.style.display = 'none';
+            loserAnimationContainer.innerHTML = '<div class="loser-icon">😭</div>'; 
+
+            gameState = {
+                boardSize: { rows: 5, cols: 7 },
+                board: Array(5).fill(0).map(() => Array(7).fill(null)),
+                pieces: [],
+                players: {
+                    p1: { id: 'p1', color: null, dieType: null, piecesInReserve: 16, capturedOpponentPieces: 0 },
+                    p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 16, <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crownfall (Official Rules)</title>
