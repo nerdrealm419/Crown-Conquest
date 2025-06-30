@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- This meta tag is crucial for responsive design -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crownfall (Official Rules)</title>
+    <title>CrownFall</title>
     <style>
         :root {
             --p1-color: #2a9d8f; /* Teal */
@@ -16,12 +15,20 @@
             --cell-bg-dark: #B4B8AB;  /* Light Grey */
             --highlight-move: #a2d2ff;
             --highlight-attack: #ffafcc;
+            --highlight-pending-attack: #c9184a; /* Darker Red */
+            --highlight-double-stack: #9b59b6; /* Purple */
             --highlight-placement: #bde0fe;
             --text-light: #eee;
             --text-dark: #1d3557;
-            --ai-bubble-bg: #1d3557;
+
+            /* Sizing Variables for Responsiveness */
+            --cell-size: 60px;
+            --piece-size: 45px;
+            --label-size: 30px;
+            --crowned-ring-size: calc(var(--piece-size) * 0.8);
+            --crowned-ring-top: calc((var(--piece-size) - var(--crowned-ring-size)) / 2);
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--background-color); color: var(--text-light); margin: 0; flex-direction: column; padding: 10px 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--background-color); color: var(--text-light); margin: 0; flex-direction: column; padding: 10px; box-sizing: border-box; }
         .game-container { display: flex; gap: 30px; align-items: flex-start; width: 100%; justify-content: center; }
         .info-panel { width: 220px; text-align: center; padding: 10px; background-color: var(--panel-color); border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); border: 3px solid transparent; transition: all 0.3s ease-in-out; }
         .active-turn-panel { border: 3px solid gold; box-shadow: 0 0 20px gold; transform: scale(1.02); }
@@ -33,8 +40,8 @@
 
         #board-container {
             display: grid;
-            grid-template-columns: 30px 1fr;
-            grid-template-rows: 30px 1fr;
+            grid-template-columns: var(--label-size) 1fr;
+            grid-template-rows: var(--label-size) 1fr;
             grid-template-areas:
                 ". col-headers"
                 "row-headers game-board";
@@ -44,25 +51,16 @@
         }
         .grid-label { font-weight: bold; color: #ccc; }
         #col-headers { grid-area: col-headers; display: flex; width: 100%; }
-        #col-headers .grid-label { width: 62px; text-align: center; }
+        #col-headers .grid-label { width: calc(var(--cell-size) + 2px); text-align: center; }
         #row-headers { grid-area: row-headers; display: flex; flex-direction: column; height: 100%; }
-        #row-headers .grid-label { height: 62px; display: flex; align-items: center; justify-content: center; }
-        #gameBoard { grid-area: game-board; display: grid; grid-template-columns: repeat(7, 60px); grid-template-rows: repeat(5, 60px); border: 3px solid #666; background-color: var(--board-bg); gap: 2px; padding: 2px; border-radius: 5px; transition: opacity 0.5s; }
+        #row-headers .grid-label { height: calc(var(--cell-size) + 2px); display: flex; align-items: center; justify-content: center; }
+        #gameBoard { grid-area: game-board; display: grid; grid-template-columns: repeat(7, var(--cell-size)); grid-template-rows: repeat(5, var(--cell-size)); border: 3px solid #666; background-color: var(--board-bg); gap: 2px; padding: 2px; border-radius: 5px; transition: opacity 0.5s; }
 
-        .cell { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; border: 1px solid #777; position: relative; transition: background-color 0.2s; }
-
-        .cell:nth-child(odd) { background-color: var(--cell-bg-light); }
-        .cell:nth-child(even) { background-color: var(--cell-bg-dark); }
-        #gameBoard > .cell:nth-child(n+8):nth-child(-n+14):nth-child(odd),
-        #gameBoard > .cell:nth-child(n+22):nth-child(-n+28):nth-child(odd),
-        #gameBoard > .cell:nth-child(n+36):nth-child(-n+42):nth-child(odd) { background-color: var(--cell-bg-dark); }
-        #gameBoard > .cell:nth-child(n+8):nth-child(-n+14):nth-child(even),
-        #gameBoard > .cell:nth-child(n+22):nth-child(-n+28):nth-child(even),
-        #gameBoard > .cell:nth-child(n+36):nth-child(-n+42):nth-child(even) { background-color: var(--cell-bg-light); }
-
+        .cell { width: var(--cell-size); height: var(--cell-size); display: flex; justify-content: center; align-items: center; box-sizing: border-box; border: 1px solid #777; position: relative; transition: background-color 0.2s; }
+       
         .player-piece {
-            width: 45px;
-            height: 45px;
+            width: var(--piece-size);
+            height: var(--piece-size);
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -83,21 +81,23 @@
         .crowned::after {
             content: '';
             position: absolute;
-            width: 80%; height: 80%;
+            width: var(--crowned-ring-size); height: var(--crowned-ring-size);
             background-color: gold;
             border-radius: 50%;
             border: 2px solid #444;
             box-sizing: border-box;
-            top: 5px; left: 50%;
+            top: var(--crowned-ring-top); left: 50%;
             transform: translateX(-50%);
             z-index: 1;
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
        
-        .crown-icon { font-size: 28px; position: absolute; text-shadow: 0 0 3px black; pointer-events: none; z-index: 2; }
+        .crown-icon { font-size: calc(var(--piece-size) * 0.7); position: absolute; text-shadow: 0 0 3px black; pointer-events: none; z-index: 2; }
         .selected { border: 4px solid #3498db; transform: scale(1.1); }
         .highlight-move { background-color: var(--highlight-move) !important; }
         .highlight-attack { background-color: var(--highlight-attack) !important; }
+        .highlight-pending-attack { background-color: var(--highlight-pending-attack) !important; }
+        .highlight-double-stack { background-color: var(--highlight-double-stack) !important; }
         .highlight-placement { background-color: var(--highlight-placement) !important; border: 2px dashed #3498db; }
         .player1-crown-spot, .player2-crown-spot { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👑</text></svg>'); background-size: 70%; background-repeat: no-repeat; background-position: center; opacity: 0.5; }
         #ui-panel { text-align: center; }
@@ -108,16 +108,21 @@
         button { padding: 10px 20px; font-size: 1em; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background-color: #457b9d; color: white; transition: background-color 0.2s; }
         button:hover { background-color: #a8dadc; color: var(--text-dark); }
         button:disabled { background-color: #666; color: #999; cursor: not-allowed; }
+       
+        #permanent-actions { margin-top: 15px; }
+        #quitButton { background-color: #c1121f; }
+        #quitButton:hover { background-color: #fca311; }
+        #quitConfirmActions button { margin: 10px; }
 
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease-in-out; }
         .modal.visible { display: flex; opacity: 1; }
-        .modal-content { background-color: var(--panel-color); padding: 30px; border: 2px solid #888; width: 80%; max-width: 600px; text-align: center; border-radius: 10px; box-shadow: 0 0 25px rgba(0,0,0, 0.5); position: relative; overflow: hidden; }
+        .modal-content { background-color: var(--panel-color); padding: 30px; border: 2px solid #888; width: 90%; max-width: 600px; text-align: center; border-radius: 10px; box-shadow: 0 0 25px rgba(0,0,0, 0.5); position: relative; overflow: hidden; }
         .modal-content h2, .modal-content h3 { color: #eee; }
         .modal-content p { font-size: 1.2em; }
        
         body.game-over #gameBoard { pointer-events: none; opacity: 0.6; }
         #loserAnimation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        .loser-icon { font-size: 100px; color: #e63946; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .loser-icon { font-size: 80px; color: #e63946; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
         .raindrop { position: absolute; bottom: 100%; width: 2px; height: 30px; background: linear-gradient(to bottom, rgba(173, 216, 230, 0), rgba(173, 216, 230, 0.6)); animation: fall linear infinite; z-index: 2;}
         @keyframes fall { to { transform: translateY(200vh); } }
 
@@ -137,124 +142,68 @@
         }
         .rolling { animation: roll-animation 1s ease-out; }
        
-        #help-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: #457b9d;
-            color: white;
-            border-radius: 50%;
-            border: 2px solid white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            z-index: 101;
-            transition: all 0.2s ease-in-out;
+        .floating-button {
+            width: 60px; height: 60px;
+            color: white; border-radius: 50%; border: 2px solid white;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 101;
+            transition: all 0.2s ease-in-out; position: fixed;
         }
-        #help-button:hover { transform: scale(1.1); background-color: #a8dadc; }
-        #ai-chat-modal {
-            display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease-in-out;
+        #help-button { bottom: 20px; right: 20px; background-color: #457b9d; }
+        #help-button:hover { transform: scale(1.1); background-color: #a8dadc; color: #1d3557; }
+       
+        #ai-button { bottom: 20px; right: 100px; background-color: #e63946; }
+        #ai-button:hover { transform: scale(1.1); background-color: #f1faee; color: #e63946;}
+        #ai-chat-display {
+            height: 300px; background-color: var(--background-color); border: 1px solid #666;
+            border-radius: 5px; padding: 10px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px; text-align: left;
         }
-        #ai-chat-modal.visible { display: flex; opacity: 1; }
-        #ai-chat-content {
-            background-color: var(--ai-bubble-bg);
-            padding: 20px;
-            border: 2px solid #a8dadc;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 0 25px rgba(168, 218, 220, 0.4);
-            position: relative;
-        }
-        #ai-chat-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid #457b9d;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        #ai-chat-header .icon { font-size: 3em; }
-        #ai-chat-header h3 { margin: 0; color: #f1faee; }
-        #ai-chat-body {
-            text-align: left;
-            max-height: 60vh;
-            overflow-y: auto;
-            color: #f1faee;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
-        #ai-chat-body ul { list-style-type: '- '; padding-left: 20px; }
+        .chat-message { padding: 8px 12px; border-radius: 15px; max-width: 80%; line-height: 1.4; word-wrap: break-word; }
+        .user-message { background-color: #457b9d; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .ai-message { background-color: #666; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
+        .ai-message ul { margin: 5px 0 5px 20px; padding: 0; }
+        .ai-message li { margin-bottom: 5px; }
+       
+        #rules-content { text-align: left; padding: 0 20px; max-height: 70vh; overflow-y: auto; }
+        #rules-content h3 { border-bottom: 1px solid #666; padding-bottom: 5px; margin-top: 20px; }
+        #rules-content h4 { margin-bottom: 5px; margin-top: 15px; color: #a8dadc; }
+        #rules-content ul, #rules-content ol { padding-left: 20px; margin-top: 5px; }
+        #rules-content li { margin-bottom: 8px; }
+
         .modal-close-button {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 30px;
-            font-weight: bold;
-            color: #ccc;
-            cursor: pointer;
+            position: absolute; top: 10px; right: 15px;
+            font-size: 30px; font-weight: bold; color: #ccc; cursor: pointer;
         }
         .modal-close-button:hover { color: white; }
 
-        /* <<< RESPONSIVE STYLES FOR MOBILE >>> */
+        /* --- Mobile Responsiveness --- */
         @media (max-width: 768px) {
-            body {
-                padding: 5px 0;
+            :root {
+                --cell-size: 45px;
+                --piece-size: 35px;
+                --label-size: 20px;
             }
-            .game-container {
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-            }
-            .info-panel {
-                width: 90%;
-                order: 1; /* Default order */
-            }
-            #p1_panel {
-                order: 3; /* Player 1 panel at the bottom */
-            }
-            #game-center {
-                order: 2; /* Game board in the middle */
-            }
-            h1 {
-                font-size: 1.5em;
-                margin: 10px 0;
-            }
+            body { padding: 5px; }
+            .game-container { flex-direction: column; align-items: center; gap: 15px; }
+            .info-panel { width: 95%; max-width: 400px; order: 1; }
+            #game-center { order: 2; }
+            #p1_panel { order: 1; }
+            #game-center { order: 2; }
+            #p2_panel { order: 3; }
 
-            /* Scale down the board and its components */
-            #board-container {
-                transform: scale(0.9); /* Scale the whole container down */
-                transform-origin: top center;
-            }
-
-            #help-button {
-                width: 50px;
-                height: 50px;
-                font-size: 24px;
-                bottom: 10px;
-                right: 10px;
-            }
+            .floating-button { width: 50px; height: 50px; font-size: 24px; }
+             #help-button { right: 15px; bottom: 15px; }
+             #ai-button { right: 80px; bottom: 15px; }
         }
-       
-        @media (max-width: 480px) {
-            #board-container {
-                transform: scale(0.8); /* Scale down even more for very small screens */
-            }
-        }
-
     </style>
 </head>
 <body>
-    <!-- The HTML body is unchanged, as all responsive logic is handled by CSS -->
     <div class="game-container">
         <div id="p1_panel" class="info-panel">
             <h2><div id="p1_swatch" class="color-swatch"></div> <span id="p1_header"></span></h2>
-            <p>Die Type: <b id="p1_die_type"></b></p>
+            <p>D20 Numbers: <b id="p1_die_type"></b></p>
             <p>Pieces in Reserve: <b id="p1_reserve"></b></p>
             <p>Opponents Captured:</p>
             <div id="p1_captured_display" class="captured-pieces-display"></div>
@@ -266,43 +215,44 @@
                 <div id="row-headers"></div>
                 <div id="gameBoard"></div>
             </div>
-            <div id="ui-panel"><div id="message"></div><div id="rollDisplay"></div><div id="setup-choices"></div><div id="action-buttons"></div></div>
+            <div id="ui-panel">
+                <div id="message"></div>
+                <div id="rollDisplay"></div>
+                <div id="setup-choices"></div>
+                <div id="action-buttons"></div>
+                <div id="permanent-actions"></div>
+            </div>
         </div>
         <div id="p2_panel" class="info-panel">
             <h2><div id="p2_swatch" class="color-swatch"></div> <span id="p2_header"></span></h2>
-            <p>Die Type: <b id="p2_die_type"></b></p>
+            <p>D20 Numbers: <b id="p2_die_type"></b></p>
             <p>Pieces in Reserve: <b id="p2_reserve"></b></p>
             <p>Opponents Captured:</p>
             <div id="p2_captured_display" class="captured-pieces-display"></div>
         </div>
     </div>
    
+    <!-- Modals -->
     <div id="dice-modal" class="modal"><div id="dice-modal-content" class="modal-content"><h3 id="dice-title">Rolling...</h3><div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div><div id="dice-results"></div></div></div>
     <div id="victoryModal" class="modal"><div id="victoryContent" class="modal-content"><div id="loserAnimation" style="display: none;"><div class="loser-icon">😭</div></div><h2 id="victoryTitle"></h2><p id="victoryMessage"></p><div id="victoryActions"></div></div></div>
     <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>You may Double-Stack this piece or place a Reinforcement from your reserve.</p><p>Reserve: <b id="crown-modal-reserve-count">X</b></p><div id="crownChoiceActions"></div></div></div>
     <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><p>Place a new piece to the left or right of your Crown Space.</p><div id="reinforceChoiceActions"></div></div></div>
+    <div id="quitConfirmModal" class="modal"><div class="modal-content"><h3>Quit Game?</h3><p>Are you sure you want to forfeit? This will count as a loss.</p><div id="quitConfirmActions"><button id="quitConfirmYes">Yes, I Quit</button><button id="quitConfirmNo">No, Keep Playing</button></div></div></div>
 
-    <div id="help-button">🤖</div>
-    <div id="ai-chat-modal">
-        <div id="ai-chat-content">
-            <span id="close-ai-chat-button" class="modal-close-button">×</span>
-            <div id="ai-chat-header">
-                <div class="icon">🤖</div>
-                <h3>Crownfall Helper</h3>
-            </div>
-            <div id="ai-chat-body"></div>
-        </div>
-    </div>
+    <!-- Floating Buttons and their Modals -->
+    <div id="help-button" class="floating-button">❓</div>
+    <div id="rulesModal" class="modal"><div class="modal-content"><span id="close-rules-button" class="modal-close-button">×</span><h2>Rules & Help</h2><div id="rules-content"><h3>1. Game Objective</h3><p>Be the first player to either:</p><ul><li>Eliminate all of your opponent's pieces.</li><li>Successfully create four crowned (double-stacked) pieces.</li></ul><h3>2. Game Components & Setup</h3><ul><li>The game is played on a 7x5 grid.</li><li>Each player starts with 4 pieces on the board and 12 in reserve.</li><li>Players roll a D20 to see who goes first. The winner chooses their color and whether they are <b>"Even"</b> or <b>"Odd"</b> for die rolls. The high roller also moves first.</li><li>Place your 4 starting pieces anywhere on your back row, but <b>not</b> on your own crown space (the middle square).</li><li><b>CRITICAL:</b> A player may NOT occupy their own crown space at any time. The game will prevent this move.</li></ul><h3>3. Piece Status & Management</h3><h4>Crowning Pieces</h4><ul><li>When your piece reaches the opponent's crown space, you get a choice (if you have reserve pieces):<ol><li><b>Double-Stack:</b> Take a piece from your reserve and place it on top, creating a "Crowned" piece.</li><li><b>Reinforce:</b> Place a new, un-crowned piece from your reserve to the left or right of your OWN crown space.</li></ol></li></ul><h4>Captured Pieces</h4><ul><li>Captured pieces are permanently removed from play but are kept on the side as trophies for the capturing player.</li></ul><h3>4. Movement & Attacks</h3><h4>Basic Movement</h4><ul><li>Pieces move one square at a time, horizontally or vertically (forwards or backwards).</li></ul><h4>Basic Attack</h4><ul><li>Pieces attack by jumping <b>diagonally</b> over an opponent's piece to an empty square. The jumped piece is captured.</li></ul><h4>Double-Stack Attack</h4><ul><li>Can only be performed by a <b>crowned</b> piece.</li><li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a single turn.</li><li>The path can change direction after the first jump (like in checkers).</li><li>You must declare the Double-Stack Attack <b>before</b> rolling the die.</li><li>If the attack roll is successful:<ul><li>Both jumped opponents are captured.</li><li>The crowned piece "disassembles" into two regular pieces.</li><li>One new piece lands on the empty square after the first opponent.</li><li>The second new piece lands on the empty square after the second opponent.</li></ul></li><li>The two pieces are now separate, uncrowned units. The entire sequence requires only one successful roll.</li></ul><h3>5. Die Roll for Attack & Defense</h3><h4>Attacking a Single Piece</h4><ul><li>The attacker rolls <b>1d20</b>. If the roll matches their type (Even/Odd), the attack succeeds.</li></ul><h4>Attacking a Crowned Piece (with a Single Piece)</h4><ul><li>The attacker rolls <b>3d20</b>. Two or more successful rolls are needed to un-crown the defender, reverting it to a single piece.</li></ul><h4>Attacking a Crowned Piece (with a Crowned Piece)</h4><ul><li>This is a "Best of 7" contest. The attacker rolls <b>7d20</b>.</li><li>If the attacker gets <b>4+</b> successes (matching their type), the defender is uncrowned.</li><li>If the defender's number is rolled <b>4+</b> times during the attacker's rolls, the <b>ATTACKER</b> is uncrowned instead.</li></ul><h3>6. Winning the Game</h3><ul><li>Eliminate all of your opponent's pieces.</li><li>Be the first to create four successfully crowned pieces.</li></ul></div></div></div>
+    <div id="ai-button" class="floating-button">🤖</div>
+    <div id="aiModal" class="modal"><div class="modal-content"><span id="close-ai-button" class="modal-close-button">×</span><h2>AI Assistant</h2><div id="ai-chat-display"></div></div></div>
 
     <script>
-        // The entire Javascript logic remains the same.
-        // It is included here for completeness.
         const gameBoardElement = document.getElementById('gameBoard');
         const colHeadersElement = document.getElementById('col-headers');
         const rowHeadersElement = document.getElementById('row-headers');
         const messageElement = document.getElementById('message');
         const rollDisplayElement = document.getElementById('rollDisplay');
         const actionButtonsElement = document.getElementById('action-buttons');
+        const permanentActionsContainer = document.getElementById('permanent-actions');
         const setupChoicesElement = document.getElementById('setup-choices');
         let gameState = {};
 
@@ -328,7 +278,9 @@
                 return;
             }
             const oldPos = piece.position;
-            gameState.board[oldPos.r][oldPos.c] = null;
+            if(oldPos) { // Can be null if it's a new piece
+                 gameState.board[oldPos.r][oldPos.c] = null;
+            }
             gameState.board[newR][newC] = piece.id;
             piece.position = { r: newR, c: newC };
         }
@@ -346,8 +298,8 @@
             p2Panel.classList.toggle('active-turn-panel', gameState.turn === 'p2');
             getEl('p1_header').textContent = `Player 1`;
             getEl('p2_header').textContent = `Player 2 (Bot)`;
-            getEl('p1_die_type').textContent = gameState.players.p1.dieType || 'N/A';
-            getEl('p2_die_type').textContent = gameState.players.p2.dieType || 'N/A';
+            getEl('p1_die_type').textContent = gameState.players.p1.dieType ? gameState.players.p1.dieType.charAt(0).toUpperCase() + gameState.players.p1.dieType.slice(1) : 'N/A';
+            getEl('p2_die_type').textContent = gameState.players.p2.dieType ? gameState.players.p2.dieType.charAt(0).toUpperCase() + gameState.players.p2.dieType.slice(1) : 'N/A';
             getEl('p1_reserve').textContent = gameState.players.p1.piecesInReserve;
             getEl('p2_reserve').textContent = gameState.players.p2.piecesInReserve;
             const p1CapturedContainer = getEl('p1_captured_display');
@@ -391,10 +343,19 @@
                     cell.classList.add('cell');
                     cell.dataset.row = r;
                     cell.dataset.col = c;
+                   
+                    if ((r + c) % 2 === 0) {
+                        cell.style.backgroundColor = 'var(--cell-bg-light)';
+                    } else {
+                        cell.style.backgroundColor = 'var(--cell-bg-dark)';
+                    }
+
                     if (r === gameState.crownSpaces.p1.row && c === gameState.crownSpaces.p1.col) cell.classList.add('player1-crown-spot');
                     if (r === gameState.crownSpaces.p2.row && c === gameState.crownSpaces.p2.col) cell.classList.add('player2-crown-spot');
                     if (gameState.highlightedMoves.some(m => m.r === r && m.c === c)) cell.classList.add('highlight-move');
                     if (gameState.highlightedAttacks.some(a => a.landing.r === r && a.landing.c === c)) cell.classList.add('highlight-attack');
+                    if (gameState.highlightedDoubleStackAttacks.some(p => p.r === r && p.c === c)) cell.classList.add('highlight-double-stack');
+                    if (gameState.highlightedPendingAttack && gameState.highlightedPendingAttack.r === r && gameState.highlightedPendingAttack.c === c) cell.classList.add('highlight-pending-attack');
                     if (gameState.highlightedPlacements.some(p => p.r === r && p.c === c)) cell.classList.add('highlight-placement');
                     const piece = getPieceAt(r, c);
                     if (piece) {
@@ -430,7 +391,7 @@
                 }
                 if (!gameState.players.p1.dieType) {
                     const group = document.createElement('div'); group.classList.add('choice-group');
-                    group.innerHTML = '<b>Choose Die Type:</b>';
+                    group.innerHTML = '<b>Choose D20 Numbers:</b>';
                     ['Even', 'Odd'].forEach(type => {
                         const button = document.createElement('button');
                         button.textContent = type;
@@ -448,6 +409,14 @@
                 button.disabled = action.disabled || false;
                 actionButtonsElement.appendChild(button);
             });
+            permanentActionsContainer.innerHTML = '';
+            if (gameState.gamePhase === 'PLAYING' && gameState.turn === 'p1') {
+                 const quitButton = document.createElement('button');
+                 quitButton.id = 'quitButton';
+                 quitButton.textContent = "Quit Game";
+                 quitButton.onclick = () => getEl('quitConfirmModal').classList.add('visible');
+                 permanentActionsContainer.appendChild(quitButton);
+            }
         }
        
         function handleBoardClick(event) {
@@ -473,10 +442,6 @@
             }
         }
 
-        function updateAIHelper(htmlContent) {
-            getEl('ai-chat-body').innerHTML = htmlContent;
-        }
-
         function initializeGame() {
             document.body.classList.remove('game-over');
             const loserAnimationContainer = getEl('loserAnimation');
@@ -495,22 +460,17 @@
                 turn: null, gamePhase: 'SETUP_D20_ROLL', winner: null,
                 message: "Let's begin! Roll to start the game.",
                 rollMessage: '', selectedPieceId: null,
-                highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [],
-                pendingAttack: null, pendingChainJump: null, pieceToCrownId: null,
+                highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [], highlightedPendingAttack: null, highlightedDoubleStackAttacks: [],
+                pendingAttack: null, pendingDoubleStackAttack: null, pieceToCrownId: null,
                 pendingMultiRoll: null,
                 actions: [{ text: 'Roll to Start Game', onClick: setupRollOff }]
             };
-            getEl('victoryModal').classList.remove('visible');
-            getEl('crownChoiceModal').classList.remove('visible');
-            getEl('reinforceChoiceModal').classList.remove('visible');
-            getEl('ai-chat-modal').classList.remove('visible');
-            updateAIHelper("<p>Welcome to Crownfall! I'm here to help. Select one of your pieces to see what it can do, or click the 'Roll to Start' button to begin.</p>");
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
             render();
         }
        
         async function setupRollOff() {
             gameState.actions = [];
-            updateAIHelper("<p>The initial roll determines who goes first and gets to choose their settings. Good luck!</p>");
             render();
             const p1Roll = await showDiceRoll("Player 1 Rolling...");
             const p2Roll = await showDiceRoll("Bot Rolling...");
@@ -519,8 +479,7 @@
             if (p1Roll > p2Roll) {
                 firstPlayer = 'p1';
                 gameState.gamePhase = 'SETUP_CHOICE';
-                gameState.message = 'You rolled higher! You will move first. Choose your color and die type.';
-                updateAIHelper("<p>You won the roll! You get to pick your piece color and whether your attacks succeed on an EVEN or ODD die roll.</p>");
+                gameState.message = 'You rolled higher! You will move first. Choose your color and D20 numbers.';
             } else if (p2Roll > p1Roll) {
                 firstPlayer = 'p2';
                 const botColor = Math.random() < 0.5 ? '#2a9d8f' : '#e76f51';
@@ -530,11 +489,9 @@
                 gameState.players.p1.color = botColor === '#2a9d8f' ? '#e76f51' : '#2a9d8f';
                 gameState.players.p1.dieType = botDieType === 'even' ? 'odd' : 'even';
                 gameState.message = `Bot rolled higher and will move first. Bot has chosen its settings.`;
-                updateAIHelper(`<p>The bot won the roll and will go first. It has chosen its settings. Now it's time to place your pieces.</p>`);
                 startPlacementPhase(firstPlayer);
             } else {
                 gameState.message = "It's a tie! Roll again.";
-                updateAIHelper("<p>A tie! The tension mounts. Roll again to break it.</p>");
                 gameState.actions = [{ text: 'Roll to Start Game', onClick: setupRollOff }];
             }
             gameState.turn = firstPlayer;
@@ -568,14 +525,23 @@
             if (firstPlayer === 'p2') {
                 placeBotStartingPieces();
                 gameState.placingPlayer = 'p1';
-                gameState.message = "Bot has placed its pieces. Now, place your 4 pieces on your starting row.";
-                updateAIHelper(`<p>The bot has placed its 4 starting pieces. Now it's your turn. Place your 4 pieces on any valid square in your back row (Row 5).</p><p>Remember, you can't place a piece on your own Crown Space at (5, 4).</p>`);
+                gameState.message = "Bot has placed its pieces. Now, place your 4 pieces on your starting row (Row 5).";
             } else {
-                gameState.message = 'Your turn to place 4 pieces on the starting row.';
-                updateAIHelper(`<p>It's your turn to place pieces. Place 4 pieces on any valid square in your back row (Row 5).</p><p>Remember, you can't place a piece on your own Crown Space at (5, 4).</p>`);
+                gameState.message = 'Your turn to place 4 pieces on your starting row (Row 5).';
             }
             highlightPlacementSpots();
             render();
+        }
+       
+        function highlightPlacementSpots() {
+            gameState.highlightedPlacements = [];
+            const player = gameState.placingPlayer;
+            const startRow = player === 'p1' ? gameState.boardSize.rows - 1 : 0;
+            for (let c = 0; c < gameState.boardSize.cols; c++) {
+                if (!isOwnCrownSpace(player, startRow, c) && gameState.board[startRow][c] === null) {
+                    gameState.highlightedPlacements.push({ r: startRow, c });
+                }
+            }
         }
        
         function placeStartingPiece(r, c) {
@@ -585,7 +551,6 @@
                 gameState.board[r][c] = newId;
                 gameState.piecesToPlace--;
                 gameState.message = `Placed piece. ${gameState.piecesToPlace} remaining.`;
-                updateAIHelper(`<p>Piece placed. You have ${gameState.piecesToPlace} more pieces to place on your back row.</p>`);
                 if (gameState.piecesToPlace === 0) {
                     if (gameState.pieces.filter(p => p.owner === 'p2').length === 0) { placeBotStartingPieces(); }
                     setTimeout(startGame, 500);
@@ -619,129 +584,163 @@
             gameState.highlightedPlacements = [];
             if (gameState.turn === 'p2') {
                 gameState.message = `Bot moves first.`;
-                updateAIHelper(`<p>The game begins! The bot moves first. Watch its strategy closely.</p>`);
                 setTimeout(botTurn, 1000);
             } else {
                 gameState.message = `You move first. Select a piece.`;
-                updateAIHelper(`<p>The game begins! You move first. Select one of your pieces to see its options.</p>`);
             }
             gameState.actions = [];
             render();
         }
 
         function selectPiece(pieceId) {
-            if (gameState.pendingChainJump || gameState.gamePhase !== 'PLAYING') return;
+            if (gameState.pendingDoubleStackAttack || gameState.gamePhase !== 'PLAYING') return;
             if (gameState.selectedPieceId === pieceId) {
                 gameState.selectedPieceId = null;
                 gameState.highlightedMoves = [];
                 gameState.highlightedAttacks = [];
+                gameState.highlightedDoubleStackAttacks = [];
                 gameState.actions = [];
-                updateAIHelper("<p>Piece deselected. Select another piece to see its moves.</p>");
             } else {
                 gameState.selectedPieceId = pieceId;
                 const piece = getPiece(pieceId);
                 const {r, c} = piece.position;
                
+                // Calculate normal moves
                 const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                gameState.highlightedMoves = moves.filter(m => {
-                    const opponentCrownSpace = piece.owner === 'p1' ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-                    if (piece.isCrowned && m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) {
-                        return false;
-                    }
-                    return !isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c);
-                });
+                gameState.highlightedMoves = moves.filter(m => !isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c));
                
-                const attacks = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
+                // Reset and calculate all possible attacks
+                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
                 gameState.highlightedAttacks = [];
-                for (const attackDir of attacks) {
-                    const targetPos = {r: r + attackDir.dr, c: c + attackDir.dc};
-                    const landingPos = {r: r + attackDir.dr * 2, c: c + attackDir.dc * 2};
+                gameState.highlightedDoubleStackAttacks = [];
+                let hasDoubleStackAttack = false;
+
+                // First, calculate all possible single jumps for any piece
+                for (const dir of attackDirs) {
+                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
+                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                    const opponentCrownSpace = piece.owner === 'p1' ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
-                    if (piece.isCrowned && landingPos.r === opponentCrownSpace.row && landingPos.c === opponentCrownSpace.col) {
-                        isValidLanding = false;
-                    }
+                    const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
+
                     if (targetPiece && targetPiece.owner !== piece.owner && isValidLanding) {
-                        gameState.highlightedAttacks.push({ target: targetPos, landing: landingPos, dir: attackDir });
+                        gameState.highlightedAttacks.push({
+                            type: 'single',
+                            target: targetPos,
+                            landing: landingPos
+                        });
+                    }
+                }
+
+                // NOW, specifically for CROWNED pieces, look for the new multi-jump attack
+                if (piece.isCrowned) {
+                    for (const dir1 of attackDirs) {
+                        const opponent1Pos = { r: r + dir1.dr, c: c + dir1.dc };
+                        const landing1Pos = { r: r + dir1.dr * 2, c: c + dir1.dc * 2 };
+                        const opponent1 = getPieceAt(opponent1Pos.r, opponent1Pos.c);
+                        const isValidLanding1 = !isOutOfBounds(landing1Pos.r, landing1Pos.c) && !getPieceAt(landing1Pos.r, landing1Pos.c) && !isOwnCrownSpace(piece.owner, landing1Pos.r, landing1Pos.c);
+
+                        if (opponent1 && opponent1.owner !== piece.owner && isValidLanding1) {
+                            // Possible first jump. Now look for a second jump from landing1.
+                            for (const dir2 of attackDirs) {
+                                const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: landing1Pos.c + dir2.dc };
+                                const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: landing2Pos.c + dir2.dc * 2 };
+                                const opponent2 = getPieceAt(opponent2Pos.r, opponent2Pos.c);
+                                const isValidLanding2 = !isOutOfBounds(landing2Pos.r, landing2Pos.c) && !getPieceAt(landing2Pos.r, landing2Pos.c) && !isOwnCrownSpace(piece.owner, landing2Pos.r, landing2Pos.c);
+
+                                if (opponent2 && opponent2.owner !== piece.owner && opponent2.id !== opponent1.id && isValidLanding2) {
+                                    hasDoubleStackAttack = true;
+                                    // This is a valid multi-jump. The user will click landing2Pos.
+                                    gameState.highlightedAttacks.push({
+                                        type: 'double-stack',
+                                        landing: landing2Pos, // The final target square
+                                        path: {
+                                            opponent1: opponent1Pos,
+                                            landing1: landing1Pos,
+                                            opponent2: opponent2Pos,
+                                        }
+                                    });
+                                    // Highlight the final landing spot with the special color.
+                                    gameState.highlightedDoubleStackAttacks.push(landing2Pos);
+                                }
+                            }
+                        }
                     }
                 }
                
                 gameState.actions = [];
-                if (piece.isCrowned && gameState.highlightedAttacks.length > 0) {
-                     gameState.actions.push({ text: 'Declare Chain Jump', onClick: () => declareChainJump() });
+                if (hasDoubleStackAttack) {
+                     gameState.actions.push({ text: 'Declare Double-Stack Attack', onClick: () => declareDoubleStackAttack() });
                 }
-
-                let helpText = `<p>You've selected the ${piece.isCrowned ? 'Crowned ' : ''}piece at <b>(${r+1}, ${c+1})</b>.</p>`;
-                if (gameState.highlightedMoves.length > 0) {
-                    helpText += `<p><b>Possible Moves (Blue):</b></p><ul>`;
-                    gameState.highlightedMoves.forEach(m => { helpText += `<li>Move to (${m.r+1}, ${m.c+1})</li>`; });
-                    helpText += `</ul>`;
-                }
-                if (gameState.highlightedAttacks.length > 0) {
-                    helpText += `<p><b>Possible Attacks (Red):</b></p><ul>`;
-                    gameState.highlightedAttacks.forEach(a => {
-                        const targetPiece = getPieceAt(a.target.r, a.target.c);
-                        helpText += `<li>Jump over ${targetPiece.isCrowned ? 'Crowned ' : ''}piece at (${a.target.r+1}, ${a.target.c+1}) to land at (${a.landing.r+1}, ${a.landing.c+1})</li>`;
-                    });
-                    helpText += `</ul>`;
-                }
-                if (piece.isCrowned && gameState.highlightedAttacks.length > 0) {
-                    helpText += `<p>As this is a Crowned piece, you can also click the <b>'Declare Chain Jump'</b> button before selecting an attack.</p>`;
-                }
-                if (gameState.highlightedMoves.length === 0 && gameState.highlightedAttacks.length === 0) {
-                    helpText += "<p>This piece has no valid moves or attacks right now.</p>";
-                }
-                updateAIHelper(helpText);
             }
             render();
         }
        
-        function declareChainJump() {
+        function declareDoubleStackAttack() {
             if (!gameState.selectedPieceId) return;
             const piece = getPiece(gameState.selectedPieceId);
-            if (!piece.isCrowned || gameState.highlightedAttacks.length === 0) return;
-            gameState.pendingChainJump = { pieceId: gameState.selectedPieceId };
-            gameState.message = "Chain Jump declared! Click a highlighted square to perform the first attack.";
-            updateAIHelper("<p><b>Chain Jump armed!</b> Select a valid attack (red square). If you succeed on the roll, your piece will split and perform a double capture.</p>");
-            gameState.actions = [{ text: "Cancel Chain Jump", onClick: () => {
-                gameState.pendingChainJump = null;
-                selectPiece(gameState.selectedPieceId);
-            }}];
+            if (!piece || !piece.isCrowned) return;
+
+            gameState.pendingDoubleStackAttack = { pieceId: gameState.selectedPieceId };
+            gameState.message = "Double-Stack Attack declared! Click a purple square to perform the multi-jump.";
+           
+            // Filter out single attacks, only keep double-stack possibilities
+            gameState.highlightedAttacks = gameState.highlightedAttacks.filter(a => a.type === 'double-stack');
+            gameState.highlightedMoves = []; // Hide normal move highlights
+           
+            gameState.actions = [{ text: "Cancel Attack", onClick: cancelAttack }];
             render();
         }
 
         function declareMoveOrAttack(r, c) {
             const attack = gameState.highlightedAttacks.find(a => a.landing.r === r && a.landing.c === c);
             const move = gameState.highlightedMoves.find(m => m.r === r && m.c === c);
-            if (gameState.pendingChainJump) {
-                if(attack) {
-                    gameState.pendingChainJump.targetPos = attack.target;
-                    gameState.pendingChainJump.landingPos = attack.landing;
-                    gameState.pendingChainJump.dir = attack.dir;
-                    gameState.message = "Roll to start your Chain Jump attack!";
-                    gameState.actions = [{ text: "Roll to Attack", onClick: startAttack }];
-                    gameState.highlightedMoves = [];
-                    gameState.highlightedAttacks = [];
-                }
-            } else if (move) {
+           
+            if (move && !gameState.pendingDoubleStackAttack) {
                 executeMove(gameState.selectedPieceId, move.r, move.c);
-            } else if (attack) {
-                gameState.pendingAttack = { pieceId: gameState.selectedPieceId, targetPos: attack.target, landingPos: attack.landing };
-                gameState.message = "You have declared an attack!";
-                gameState.actions = [{ text: "Roll to Attack", onClick: startAttack }];
+                return;
+            }
+
+            if (attack) {
+                gameState.highlightedPendingAttack = { r: attack.landing.r, c: attack.landing.c };
+               
+                if (attack.type === 'double-stack') {
+                    if (!gameState.pendingDoubleStackAttack) {
+                        gameState.message = "You must declare a Double-Stack Attack first using the button.";
+                        render();
+                        return;
+                    }
+                    gameState.pendingDoubleStackAttack.path = attack.path;
+                    gameState.pendingDoubleStackAttack.landingPos = attack.landing;
+                    gameState.message = "Roll to start your Double-Stack Attack!";
+                } else {
+                    gameState.pendingAttack = { pieceId: gameState.selectedPieceId, targetPos: attack.target, landingPos: attack.landing };
+                    gameState.message = "You have declared an attack!";
+                }
+               
+                gameState.actions = [
+                    { text: "Roll to Attack", onClick: startAttack },
+                    { text: "Cancel Attack", onClick: cancelAttack }
+                ];
                 gameState.highlightedMoves = [];
                 gameState.highlightedAttacks = [];
+                gameState.highlightedDoubleStackAttacks = [];
             }
-            updateAIHelper("<p>Action declared! Now for the roll of the die...</p>");
             render();
         }
        
+        function cancelAttack() {
+            const pieceId = gameState.selectedPieceId;
+            gameState.pendingAttack = null;
+            gameState.pendingDoubleStackAttack = null;
+            gameState.highlightedPendingAttack = null;
+            gameState.message = "Attack canceled. Select a move or another attack.";
+            selectPiece(pieceId);
+        }
+
         function executeMove(pieceId, r, c) {
             const piece = getPiece(pieceId);
             movePieceOnBoard(piece, r, c);
-            const opponentCrownSpace = (piece.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-            if (r === opponentCrownSpace.row && c === opponentCrownSpace.col) {
+            if (r === gameState.crownSpaces[piece.owner === 'p1' ? 'p2' : 'p1'].row && c === gameState.crownSpaces[piece.owner === 'p1' ? 'p2' : 'p1'].col) {
                 enterCrowningPhase(pieceId);
             } else {
                 endTurn();
@@ -749,29 +748,29 @@
         }
        
         async function startAttack() {
-            const isChainJump = !!gameState.pendingChainJump;
-            const attackData = isChainJump ? gameState.pendingChainJump : gameState.pendingAttack;
+            const isDoubleStack = !!gameState.pendingDoubleStackAttack;
+            const attackData = isDoubleStack ? gameState.pendingDoubleStackAttack : gameState.pendingAttack;
             if (!attackData) return;
 
             gameState.actions = [];
             render();
 
             const attacker = getPiece(attackData.pieceId);
-            const defender = getPieceAt(attackData.targetPos.r, attackData.targetPos.c);
+            const defender = !isDoubleStack ? getPieceAt(attackData.targetPos.r, attackData.targetPos.c) : null;
            
             let numRolls = 1;
-            if (attacker.isCrowned && defender.isCrowned) numRolls = 7;
-            else if (!attacker.isCrowned && defender.isCrowned) numRolls = 3;
+            // The new double-stack attack is a single roll. Multi-roll only applies to attacking a crowned piece.
+            if (!isDoubleStack && attacker.isCrowned && defender.isCrowned) numRolls = 7;
+            else if (!isDoubleStack && !attacker.isCrowned && defender.isCrowned) numRolls = 3;
 
             if (numRolls === 1) {
                 const roll = await showDiceRoll(`${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} Attacking...`);
                 const isSuccess = (gameState.players[attacker.owner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attacker.owner].dieType === 'odd' && roll % 2 !== 0);
                
-                if (isChainJump) {
-                    if (isSuccess) { resolveChainJump(attackData); }
+                if (isDoubleStack) {
+                    if (isSuccess) { resolveDoubleStackAttack(attackData); }
                     else {
-                        gameState.message = "Chain Jump failed! The first attack was unsuccessful.";
-                        gameState.pendingChainJump = null;
+                        gameState.message = "Double-Stack Attack failed! The attack was unsuccessful.";
                         setTimeout(endTurn, 2000);
                     }
                     return;
@@ -783,9 +782,8 @@
                     gameState.board[attackData.targetPos.r][attackData.targetPos.c] = null;
                     gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
                     movePieceOnBoard(attacker, attackData.landingPos.r, attackData.landingPos.c);
-
-                    const opponentCrownSpace = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-                    if (attackData.landingPos.r === opponentCrownSpace.row && attackData.landingPos.c === opponentCrownSpace.col) {
+                    const oppCrown = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
+                    if (attackData.landingPos.r === oppCrown.row && attackData.landingPos.c === oppCrown.col) {
                         enterCrowningPhase(attacker.id);
                     } else {
                         setTimeout(endTurn, 2000);
@@ -795,21 +793,12 @@
                     setTimeout(endTurn, 2000);
                 }
             } else {
-                gameState.pendingMultiRoll = {
-                    attackData,
-                    rollsNeeded: numRolls,
-                    rollsMade: 0,
-                    successes: 0,
-                    defenderSuccesses: 0
-                };
+                gameState.pendingMultiRoll = { attackData, rollsNeeded: numRolls, rollsMade: 0, successes: 0, defenderSuccesses: 0 };
                 gameState.message = `Attack initiated! Need to roll ${numRolls} dice.`;
-                updateAIHelper(`<p>A complex attack begins! This requires multiple rolls. The outcome depends on how many successes you get.</p>`);
-                gameState.rollMessage = `Successes: 0 | Rolls: 0/${numRolls}`;
+                gameState.rollMessage = `Successes: 0 / ${numRolls} rolls made`;
                 if(gameState.turn === 'p1') {
                     gameState.actions = [{text: `Roll Die (1 of ${numRolls})`, onClick: executeSingleRoll}];
-                } else {
-                    setTimeout(executeSingleRoll, 1000);
-                }
+                } else { setTimeout(executeSingleRoll, 1000); }
                 render();
             }
         }
@@ -827,17 +816,15 @@
            
             multiRoll.rollsMade++;
             const isAttackerSuccess = (gameState.players[attackerId].dieType === 'even' && roll % 2 === 0) || (gameState.players[attackerId].dieType === 'odd' && roll % 2 !== 0);
-            if (isAttackerSuccess) multiRoll.successes++;
-           
-            if (multiRoll.rollsNeeded === 7) {
-                const isDefenderSuccess = (gameState.players[defenderId].dieType === 'even' && roll % 2 === 0) || (gameState.players[defenderId].dieType === 'odd' && roll % 2 !== 0);
-                if (isDefenderSuccess) multiRoll.defenderSuccesses++;
-            }
+            const isDefenderSuccess = (gameState.players[defenderId].dieType === 'even' && roll % 2 === 0) || (gameState.players[defenderId].dieType === 'odd' && roll % 2 !== 0);
 
-            gameState.message = `Roll ${multiRoll.rollsMade} of ${multiRoll.rollsNeeded} was a ${roll}. (${isAttackerSuccess ? 'Success!' : 'Failure'})`;
-            let successMsg = `Attacker: ${multiRoll.successes}`;
-            if (multiRoll.rollsNeeded === 7) successMsg += ` | Defender: ${multiRoll.defenderSuccesses}`;
-            gameState.rollMessage = successMsg + ` | Rolls: ${multiRoll.rollsMade}/${multiRoll.rollsNeeded}`;
+            if (isAttackerSuccess) multiRoll.successes++;
+            if (multiRoll.rollsNeeded === 7 && isDefenderSuccess) multiRoll.defenderSuccesses++;
+
+            gameState.message = `Roll ${multiRoll.rollsMade} of ${multiRoll.rollsNeeded} was a ${roll}.`;
+            let successMsg = `Attacker Successes: ${multiRoll.successes}`;
+            if (multiRoll.rollsNeeded === 7) successMsg += ` | Defender Successes: ${multiRoll.defenderSuccesses}`;
+            gameState.rollMessage = successMsg;
 
             if (multiRoll.rollsMade >= multiRoll.rollsNeeded) {
                 resolveMultiRollAttack();
@@ -850,7 +837,7 @@
             }
             render();
         }
-       
+
         function resolveMultiRollAttack() {
             const { attackData, rollsNeeded, successes, defenderSuccesses } = gameState.pendingMultiRoll;
             const attacker = getPiece(attackData.pieceId);
@@ -875,44 +862,62 @@
                     message = `Roll-off is a draw (${successes} to ${defenderSuccesses}). No pieces are changed.`;
                 }
             }
-
             gameState.message = message;
-            gameState.pendingMultiRoll = null;
-            gameState.pendingAttack = null;
-            gameState.pendingChainJump = null;
             setTimeout(endTurn, 2500);
         }
 
-        function resolveChainJump(attackData) {
-            const { pieceId, targetPos, landingPos, dir } = attackData;
+        function resolveDoubleStackAttack(attackData) {
+            const { pieceId, path, landingPos } = attackData;
             const attacker = getPiece(pieceId);
-            const defender = getPieceAt(targetPos.r, targetPos.c);
-
-            gameState.players[attacker.owner].capturedOpponentPieces++;
-            gameState.board[targetPos.r][targetPos.c] = null;
-            gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
-            gameState.board[attacker.position.r][attacker.position.c] = null;
-            attacker.isCrowned = false;
-            movePieceOnBoard(attacker, landingPos.r, landingPos.c);
            
-            const secondLandingPos = { r: landingPos.r + dir.dr, c: landingPos.c + dir.dc };
-            const isSecondJumpBlocked = isOutOfBounds(secondLandingPos.r, secondLandingPos.c) || getPieceAt(secondLandingPos.r, secondLandingPos.c) || isOwnCrownSpace(attacker.owner, secondLandingPos.r, secondLandingPos.c);
-           
-            let newPieceId = null;
-            if (isSecondJumpBlocked) {
-                 gameState.message = "Chain jump successful, but the second jump was blocked!";
-            } else {
-                newPieceId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
-                gameState.pieces.push({ id: newId, owner: attacker.owner, isCrowned: false, position: secondLandingPos });
-                gameState.board[secondLandingPos.r][secondLandingPos.c] = newId;
-                gameState.message = "Chain jump successful! The piece has split.";
+            if (!attacker || !path || !landingPos) {
+                console.error("Could not resolve double stack attack, missing data.", attackData);
+                endTurn();
+                return;
             }
+
+            const { opponent1, landing1, opponent2 } = path;
+            const landing2 = landingPos;
+
+            // 1. Capture both opponents
+            const defender1 = getPieceAt(opponent1.r, opponent1.c);
+            const defender2 = getPieceAt(opponent2.r, opponent2.c);
+
+            gameState.board[opponent1.r][opponent1.c] = null;
+            gameState.board[opponent2.r][opponent2.c] = null;
+            gameState.pieces = gameState.pieces.filter(p => p.id !== defender1.id && p.id !== defender2.id);
+            gameState.players[attacker.owner].capturedOpponentPieces += 2;
+
+            // 2. Uncrown and split the attacker
+            // Remove original piece from board
+            gameState.board[attacker.position.r][attacker.position.c] = null;
            
-            gameState.pendingChainJump = null;
-            const opponentCrownSpace = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-            if (landingPos.r === opponentCrownSpace.row && landingPos.c === opponentCrownSpace.col) { enterCrowningPhase(attacker.id); }
-            else if (newPieceId && secondLandingPos.r === opponentCrownSpace.row && secondLandingPos.c === opponentCrownSpace.col) { enterCrowningPhase(newPieceId); }
-            else { setTimeout(endTurn, 2500); }
+            // Piece 1 (the original piece, now uncrowned) moves to the first landing spot
+            attacker.isCrowned = false;
+            movePieceOnBoard(attacker, landing1.r, landing1.c);
+
+            // Piece 2 (a new piece) is created at the second landing spot
+            const newPieceId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
+            const newPiece = {
+                id: newPieceId,
+                owner: attacker.owner,
+                isCrowned: false,
+                position: { r: landing2.r, c: landing2.c }
+            };
+            gameState.pieces.push(newPiece);
+            gameState.board[newPiece.position.r][newPiece.position.c] = newPiece.id;
+
+            gameState.message = "Double-Stack Attack successful! The piece split and captured two opponents.";
+           
+            // 3. Check for crowning on either of the new piece locations and end turn
+            const oppCrown = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
+            if (landing1.r === oppCrown.row && landing1.c === oppCrown.col) {
+                enterCrowningPhase(attacker.id);
+            } else if (newPiece.position.r === oppCrown.row && newPiece.position.c === oppCrown.col) {
+                enterCrowningPhase(newPiece.id);
+            } else {
+                setTimeout(endTurn, 2500);
+            }
         }
        
         function promptReinforceChoice() {
@@ -921,7 +926,7 @@
             const actionsContainer = getEl('reinforceChoiceActions');
             actionsContainer.innerHTML = '';
            
-            const player = gameState.turn;
+            const player = getPiece(gameState.pieceToCrownId).owner;
             const ownCrownSpace = gameState.crownSpaces[player];
             const leftSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col - 1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
             const rightSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col + 1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
@@ -953,7 +958,6 @@
             const hasReserves = playerObj.piecesInReserve > 0;
            
             gameState.message = `${player === 'p1' ? 'You have' : 'Bot has'} reached the opponent's crown space!`;
-            updateAIHelper("<p>A crowning moment! You've reached the opponent's crown space. You can now choose to either <b>Double-Stack</b> this piece to make it stronger, or <b>Reinforce</b> by placing a new piece from your reserve next to your own crown space.</p>");
             gameState.actions = [];
             render();
 
@@ -962,16 +966,19 @@
                 const actionsContainer = getEl('crownChoiceActions');
                 actionsContainer.innerHTML = '';
                 getEl('crown-modal-reserve-count').textContent = playerObj.piecesInReserve;
+               
                 const crownButton = document.createElement('button');
                 crownButton.textContent = "Double-Stack";
                 crownButton.onclick = () => { crownModal.classList.remove('visible'); resolveCrowning('crown'); };
                 crownButton.disabled = !hasReserves;
                 actionsContainer.appendChild(crownButton);
+
                 const reinforceButton = document.createElement('button');
                 reinforceButton.textContent = "Place Reinforcement";
                 reinforceButton.onclick = () => promptReinforceChoice();
                 reinforceButton.disabled = !hasReserves;
                 actionsContainer.appendChild(reinforceButton);
+               
                 if (!hasReserves) {
                     const noActionInfo = document.createElement('p');
                     noActionInfo.textContent = "You have no pieces in reserve to take an action.";
@@ -982,17 +989,21 @@
             } else {
                 setTimeout(() => {
                     const ownCrownSpace = gameState.crownSpaces.p2;
-                    const leftSpotFree = !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
-                    const rightSpotFree = !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
+                    const leftSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col-1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
+                    const rightSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col+1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
                     const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
+                   
                     if (canReinforce && Math.random() > 0.5) {
                         const availableDirections = [];
                         if (leftSpotFree) availableDirections.push('left');
                         if (rightSpotFree) availableDirections.push('right');
                         const direction = availableDirections[Math.floor(Math.random() * availableDirections.length)];
                         resolveCrowning('reinforce', direction);
-                    } else if (hasReserves) { resolveCrowning('crown'); }
-                    else { resolveCrowning('none'); }
+                    } else if (hasReserves) {
+                        resolveCrowning('crown');
+                    } else {
+                        resolveCrowning('none');
+                    }
                 }, 1500);
             }
         }
@@ -1010,12 +1021,15 @@
             } else if (choice === 'reinforce' && direction) {
                 const ownCrownSpace = gameState.crownSpaces[player];
                 const placementCol = direction === 'left' ? ownCrownSpace.col - 1 : ownCrownSpace.col + 1;
+               
                 const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
                 gameState.pieces.push({ id: newId, owner: player, isCrowned: false, position: { r: ownCrownSpace.row, c: placementCol } });
                 gameState.board[ownCrownSpace.row][placementCol] = newId;
                 playerObj.piecesInReserve--;
-                gameState.message = `${player === 'p1' ? 'You' : "The Bot"} placed a reinforcement to the ${direction}.`;
-            } else { gameState.message = "No reserve action was taken."; }
+                gameState.message = `${player === 'p1' ? 'You' : "The Bot"} placed a reinforcement to the ${direction} of ${player === 'p1' ? 'your' : "its"} crown.`;
+            } else {
+                 gameState.message = "No reserve action was taken.";
+            }
             gameState.gamePhase = 'PLAYING';
             gameState.pieceToCrownId = null;
             endTurn();
@@ -1057,19 +1071,23 @@
             button.onclick = initializeGame;
             actions.appendChild(button);
             modal.classList.add('visible');
+            render();
         }
 
         function endTurn() {
             gameState.selectedPieceId = null;
             gameState.highlightedMoves = [];
             gameState.highlightedAttacks = [];
+            gameState.highlightedPendingAttack = null;
+            gameState.highlightedDoubleStackAttacks = [];
+            gameState.pendingAttack = null;
+            gameState.pendingDoubleStackAttack = null;
+            gameState.pendingMultiRoll = null;
             gameState.actions = [];
             gameState.rollMessage = '';
             if (checkForWin()) return;
             gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
             gameState.message = `${gameState.turn === 'p1' ? 'Your' : "Bot's"} turn to move.`;
-            if (gameState.turn === 'p1') { updateAIHelper("<p>It's your turn. Select a piece to see its moves.</p>"); }
-            else { updateAIHelper("<p>It's the bot's turn now. Let's see what it does...</p>"); }
             render();
             if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 2000);
         }
@@ -1134,20 +1152,104 @@
                 }, 1000);
             });
         }
+       
+        // --- NEW/UPDATED AI and UI Functions ---
 
+        function addMessageToChat(message, sender) {
+            const chatDisplay = getEl('ai-chat-display');
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('chat-message', sender === 'ai' ? 'ai-message' : 'user-message');
+            messageEl.innerHTML = message;
+            chatDisplay.appendChild(messageEl);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        function generateAiHelp() {
+            const chatDisplay = getEl('ai-chat-display');
+            chatDisplay.innerHTML = '';
+            const aiModal = getEl('aiModal');
+           
+            if (gameState.turn !== 'p1' || gameState.gamePhase !== 'PLAYING') {
+                addMessageToChat("I can only give suggestions on your turn during the game. You can check the <b>❓</b> button for general rules anytime!", 'ai');
+                aiModal.classList.add('visible');
+                return;
+            }
+
+            if (gameState.selectedPieceId === null) {
+                addMessageToChat("Please select one of your pieces on the board, then click my button again. I'll give you the best moves for it!", 'ai');
+            } else {
+                const piece = getPiece(gameState.selectedPieceId);
+                const { r, c } = piece.position;
+                const opponentId = 'p2';
+                let possibleActions = [];
+
+                const attackOffsets = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+                for (const dir of attackOffsets) {
+                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
+                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
+                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
+                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
+                    if(targetPiece && targetPiece.owner === opponentId && isValidLanding){
+                       possibleActions.push({ text: `Attack piece at (${targetPos.c + 1},${targetPos.r + 1})`, score: 3 });
+                    }
+                }
+
+                const moveOffsets = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                moveOffsets.forEach(m => {
+                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c)) {
+                        let score = 1;
+                        if (m.r < r) score = 2;
+                        possibleActions.push({ text: `Move to (${m.c + 1},${m.r + 1})`, score: score });
+                    }
+                });
+
+                if (possibleActions.length === 0) {
+                     addMessageToChat(`The selected piece at (${c + 1},${r + 1}) has no available moves or attacks.`, 'ai');
+                } else {
+                    possibleActions.sort((a, b) => b.score - a.score);
+                    let response = `For your piece at (${c + 1},${r + 1}), here are your options:<ul>`;
+                    possibleActions.forEach((action) => {
+                        let prefix = "";
+                        if (action.score >= 3) prefix = "<b>Top Priority:</b> ";
+                        else if (action.score >= 2) prefix = "<b>Good Move:</b> ";
+                        else prefix = "Safe Move: ";
+                        response += `<li>${prefix}${action.text}</li>`;
+                    });
+                    response += "</ul>";
+                    addMessageToChat(response, 'ai');
+                }
+            }
+            aiModal.classList.add('visible');
+        }
+       
+        // --- Event Listeners ---
         gameBoardElement.addEventListener('click', handleBoardClick);
        
         const helpButton = getEl('help-button');
-        const aiChatModal = getEl('ai-chat-modal');
-        const closeAiChatButton = getEl('close-ai-chat-button');
-        helpButton.onclick = () => aiChatModal.classList.add('visible');
-        closeAiChatButton.onclick = () => aiChatModal.classList.remove('visible');
-        aiChatModal.addEventListener('click', (event) => {
-            if (event.target === aiChatModal) {
-                aiChatModal.classList.remove('visible');
-            }
+        const rulesModal = getEl('rulesModal');
+        const closeRulesButton = getEl('close-rules-button');
+        helpButton.onclick = () => rulesModal.classList.add('visible');
+        closeRulesButton.onclick = () => rulesModal.classList.remove('visible');
+        rulesModal.addEventListener('click', (event) => {
+            if (event.target === rulesModal) rulesModal.classList.remove('visible');
         });
 
+        const aiButton = getEl('ai-button');
+        const aiModal = getEl('aiModal');
+        const closeAiButton = getEl('close-ai-button');
+        aiButton.onclick = generateAiHelp;
+        closeAiButton.onclick = () => aiModal.classList.remove('visible');
+        aiModal.addEventListener('click', (e) => { if(e.target === aiModal) aiModal.classList.remove('visible'); });
+
+        const quitConfirmModal = getEl('quitConfirmModal');
+        const quitConfirmYes = getEl('quitConfirmYes');
+        const quitConfirmNo = getEl('quitConfirmNo');
+        quitConfirmNo.onclick = () => quitConfirmModal.classList.remove('visible');
+        quitConfirmYes.onclick = () => {
+            quitConfirmModal.classList.remove('visible');
+            setWinner('p2', 'You have forfeited the game.');
+        };
+       
         initializeGame();
     </script>
 </body>
