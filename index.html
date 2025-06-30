@@ -126,36 +126,6 @@
         .raindrop { position: absolute; bottom: 100%; width: 2px; height: 30px; background: linear-gradient(to bottom, rgba(173, 216, 230, 0), rgba(173, 216, 230, 0.6)); animation: fall linear infinite; z-index: 2;}
         @keyframes fall { to { transform: translateY(200vh); } }
 
-        /* --- Victory Fireworks --- */
-        #fireworks-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 99; /* Below modal, above overlay */
-            pointer-events: none;
-            display: none;
-        }
-        .particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            animation: explode 1.2s forwards;
-            opacity: 1;
-        }
-        @keyframes explode {
-            0% {
-                transform: translate(0, 0) scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: translate(var(--x-end), var(--y-end)) scale(0);
-                opacity: 0;
-            }
-        }
-
         #dice-modal-content { text-align: center; }
         #dice-container { margin-bottom: 20px; }
         #dice-svg { width: 150px; height: 150px; }
@@ -271,12 +241,9 @@
 
     <!-- Floating Buttons and their Modals -->
     <div id="help-button" class="floating-button">❓</div>
-    <div id="rulesModal" class="modal"><div class="modal-content"><span id="close-rules-button" class="modal-close-button">×</span><h2>Rules & Help</h2><div id="rules-content"><h3>1. Game Objective</h3><p>Be the first player to either:</p><ul><li>Eliminate all of your opponent's pieces.</li><li>Successfully create four crowned (double-stacked) pieces.</li></ul><h3>2. Game Components & Setup</h3><ul><li>The game is played on a 7x5 grid.</li><li>Each player starts with 4 pieces on the board and 12 in reserve.</li><li>Players roll a D20 to see who goes first. The winner chooses their color and whether they are <b>"Even"</b> or <b>"Odd"</b> for die rolls. The high roller also moves first.</li><li>Place your 4 starting pieces anywhere on your back row, but <b>not</b> on your own crown space (the middle square).</li><li><b>CRITICAL:</b> A player may NOT occupy their own crown space at any time. The game will prevent this move.</li></ul><h3>3. Piece Status & Management</h3><h4>Crowning Pieces</h4><ul><li>When a regular piece reaches the opponent's crown space, you get a choice (if you have reserve pieces):<ol><li><b>Double-Stack:</b> Take a piece from your reserve and place it on top, creating a "Crowned" piece.</li><li><b>Reinforce:</b> Place a new, un-crowned piece from your reserve to the left or right of your OWN crown space.</li></ol></li><li>A crowned piece cannot *move* to the opponent's crown space again. It can, however, initiate an *attack* against a piece that is on or near the crown space.</li></ul><h4>Captured Pieces</h4><ul><li>Captured pieces are permanently removed from play but are kept on the side as trophies for the capturing player.</li></ul><h3>4. Movement & Attacks</h3><h4>Basic Movement</h4><ul><li>Pieces move one square at a time, horizontally or vertically (forwards or backwards).</li></ul><h4>Basic Attack</h4><ul><li>Pieces attack by jumping <b>diagonally</b> over an opponent's piece to an empty square. The jumped piece is captured.</li></ul><h4>Double-Stack Attack</h4><ul><li>Can only be performed by a <b>crowned</b> piece.</li><li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a single turn.</li><li>The path can change direction after the first jump (like in checkers).</li><li>You must declare the Double-Stack Attack <b>before</b> rolling the die.</li><li>If the attack roll is successful:<ul><li>Both jumped opponents are captured.</li><li>The crowned piece "disassembles" into two regular pieces.</li><li>One new piece lands on the empty square after the first opponent.</li><li>The second new piece lands on the empty square after the second opponent.</li></ul></li><li>The two pieces are now separate, uncrowned units. The entire sequence requires only one successful roll.</li></ul><h3>5. Die Roll for Attack & Defense</h3><h4>Attacking a Single Piece</h4><ul><li>The attacker rolls <b>1d20</b>. If the roll matches their type (Even/Odd), the attack succeeds.</li></ul><h4>Attacking a Crowned Piece (with a Single Piece)</h4><ul><li>The attacker rolls <b>3d20</b>. Two or more successful rolls are needed to un-crown the defender, reverting it to a single piece.</li></ul><h4>Attacking a Crowned Piece (with a Crowned Piece)</h4><ul><li>This is a "Best of 7" contest. The attacker rolls <b>7d20</b>.</li><li>If the attacker gets <b>4+</b> successes (matching their type), the defender is uncrowned.</li><li>If the defender's number is rolled <b>4+</b> times during the attacker's rolls, the <b>ATTACKER</b> is uncrowned instead.</li></ul><h3>6. Winning the Game</h3><ul><li>Eliminate all of your opponent's pieces.</li><li>Be the first to create four successfully crowned pieces.</li></ul></div></div></div>
+    <div id="rulesModal" class="modal"><div class="modal-content"><span id="close-rules-button" class="modal-close-button">×</span><h2>Rules & Help</h2><div id="rules-content"><h3>1. Game Objective</h3><p>Be the first player to either:</p><ul><li>Eliminate all of your opponent's pieces.</li><li>Successfully create four crowned (double-stacked) pieces.</li></ul><h3>2. Game Components & Setup</h3><ul><li>The game is played on a 7x5 grid.</li><li>Each player starts with 4 pieces on the board and 12 in reserve.</li><li>Players roll a D20 to see who goes first. The winner chooses their color and whether they are <b>"Even"</b> or <b>"Odd"</b> for die rolls. The high roller also moves first.</li><li>Place your 4 starting pieces anywhere on your back row, but <b>not</b> on your own crown space (the middle square).</li><li><b>CRITICAL:</b> A player may NOT occupy their own crown space at any time. The game will prevent this move.</li></ul><h3>3. Piece Status & Management</h3><h4>Crowning Pieces</h4><ul><li>When a regular piece reaches the opponent's crown space, you get a choice (if you have reserve pieces):<ol><li><b>Double-Stack:</b> Take a piece from your reserve and place it on top, creating a "Crowned" piece.</li><li><b>Reinforce:</b> Place a new, un-crowned piece from your reserve to the left or right of your OWN crown space.</li></ol></li><li>A crowned piece cannot *move* to the opponent's crown space again. It can, however, initiate an *attack* against a piece that is on the crown space.</li></ul><h4>Captured Pieces</h4><ul><li>Captured pieces are permanently removed from play but are kept on the side as trophies for the capturing player.</li></ul><h3>4. Movement & Attacks</h3><h4>Basic Movement</h4><ul><li>Pieces move one square at a time, horizontally or vertically (forwards or backwards).</li></ul><h4>Basic Attack</h4><ul><li>Pieces attack by jumping <b>diagonally</b> over an opponent's piece to an empty square. The jumped piece is captured.</li></ul><h4>Double-Stack Attack</h4><ul><li>Can only be performed by a <b>crowned</b> piece.</li><li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a single turn.</li><li>The path can change direction after the first jump (like in checkers).</li><li>You must declare the Double-Stack Attack <b>before</b> rolling the die.</li><li>If the attack roll is successful:<ul><li>Both jumped opponents are captured.</li><li>The crowned piece "disassembles" into two regular pieces.</li><li>One new piece lands on the empty square after the first opponent.</li><li>The second new piece lands on the empty square after the second opponent.</li></ul></li><li>The two pieces are now separate, uncrowned units. The entire sequence requires only one successful roll.</li></ul><h3>5. Die Roll for Attack & Defense</h3><h4>Attacking a Single Piece</h4><ul><li>The attacker rolls <b>1d20</b>. If the roll matches their type (Even/Odd), the attack succeeds.</li></ul><h4>Attacking a Crowned Piece (with a Single Piece)</h4><ul><li>The attacker rolls <b>3d20</b>. Two or more successful rolls are needed to un-crown the defender, reverting it to a single piece.</li></ul><h4>Attacking a Crowned Piece (with a Crowned Piece)</h4><ul><li>This is a "Best of 7" contest. The attacker rolls <b>7d20</b>.</li><li>If the attacker gets <b>4+</b> successes (matching their type), the defender is uncrowned.</li><li>If the defender's number is rolled <b>4+</b> times during the attacker's rolls, the <b>ATTACKER</b> is uncrowned instead.</li></ul><h3>6. Winning the Game</h3><ul><li>Eliminate all of your opponent's pieces.</li><li>Be the first to create four successfully crowned pieces.</li></ul></div></div></div>
     <div id="ai-button" class="floating-button">🤖</div>
     <div id="aiModal" class="modal"><div class="modal-content"><span id="close-ai-button" class="modal-close-button">×</span><h2>AI Assistant</h2><div id="ai-chat-display"></div></div></div>
-
-    <!-- Fireworks Container -->
-    <div id="fireworks-container"></div>
 
     <script>
         const gameBoardElement = document.getElementById('gameBoard');
@@ -314,7 +281,7 @@
             if(oldPos && gameState.board[oldPos.r] && gameState.board[oldPos.r][oldPos.c] === piece.id) {
                  gameState.board[oldPos.r][oldPos.c] = null;
             }
-            gameState.board[newR][newC] = newPiece.id;
+            gameState.board[newR][newC] = piece.id;
             piece.position = { r: newR, c: newC };
         }
 
@@ -480,14 +447,6 @@
             const loserAnimationContainer = getEl('loserAnimation');
             loserAnimationContainer.style.display = 'none';
             loserAnimationContainer.innerHTML = '<div class="loser-icon">😭</div>';
-           
-            // --- Fireworks Cleanup ---
-            if (gameState.fireworksInterval) {
-                clearInterval(gameState.fireworksInterval);
-            }
-            const fireworksContainer = getEl('fireworks-container');
-            fireworksContainer.innerHTML = '';
-            fireworksContainer.style.display = 'none';
 
             gameState = {
                 boardSize: { rows: 5, cols: 7 },
@@ -504,8 +463,7 @@
                 highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [], highlightedPendingAttack: null, highlightedDoubleStackAttacks: [],
                 pendingAttack: null, pendingDoubleStackAttack: null, pieceToCrownId: null,
                 pendingMultiRoll: null,
-                actions: [{ text: 'Roll to Start Game', onClick: setupRollOff }],
-                fireworksInterval: null
+                actions: [{ text: 'Roll to Start Game', onClick: setupRollOff }]
             };
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
             render();
@@ -648,23 +606,29 @@
                 const {r, c} = piece.position;
                 const opponentCrownSpace = (piece.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
                
+                // Calculate valid moves
                 const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
                 gameState.highlightedMoves = moves.filter(m => {
                     const isOpponentCrown = (m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col);
+                    // A crowned piece cannot move onto the opponent's crown space
                     if (piece.isCrowned && isOpponentCrown) return false;
                     return !isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c);
                 });
                
+                // Calculate valid attacks
                 const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
                 gameState.highlightedAttacks = [];
                 gameState.highlightedDoubleStackAttacks = [];
                 let hasDoubleStackAttack = false;
 
+                // Regular single-jump attacks
                 for (const dir of attackDirs) {
                     const targetPos = {r: r + dir.dr, c: c + dir.dc};
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
                    
+                    // FIX: An attack is allowed even if the landing spot is the opponent's crown space.
+                    // The multi-die roll logic handles the outcome, the piece doesn't actually move there.
                     const isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
 
                     if (targetPiece && targetPiece.owner !== piece.owner && isValidLanding) {
@@ -672,6 +636,7 @@
                     }
                 }
 
+                // Double-stack attacks (for crowned pieces only)
                 if (piece.isCrowned) {
                     for (const dir1 of attackDirs) {
                         const opponent1Pos = { r: r + dir1.dr, c: c + dir1.dc };
@@ -1094,8 +1059,6 @@
                     drop.style.animationDuration = 0.5 + Math.random() * 0.5 + 's';
                     animationContainer.appendChild(drop);
                 }
-            } else if (winner === 'p1') {
-                launchFireworks();
             }
            
             const actions = getEl('victoryActions');
@@ -1146,6 +1109,8 @@
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
                    
+                    // FIX: Removed the incorrect check that prevented the bot from initiating an attack
+                    // if the landing square was the opponent's crown space.
                     let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c);
                    
                     if(targetPiece && targetPiece.owner === 'p1' && isValidLanding){
@@ -1188,46 +1153,7 @@
             });
         }
        
-        // --- Victory Fireworks Functions ---
-        const fireworksContainer = getEl('fireworks-container');
-        const fireworkColors = ['#FFD700', '#FF4500', '#00FF7F', '#8A2BE2', '#00BFFF', '#FF69B4'];
-
-        function createFirework() {
-            const x = Math.random() * window.innerWidth;
-            const y = Math.random() * window.innerHeight;
-            const particleCount = 30;
-
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.classList.add('particle');
-                particle.style.left = `${x}px`;
-                particle.style.top = `${y}px`;
-                particle.style.backgroundColor = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
-
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * 150 + 50;
-                const xEnd = Math.cos(angle) * distance;
-                const yEnd = Math.sin(angle) * distance;
-
-                particle.style.setProperty('--x-end', `${xEnd}px`);
-                particle.style.setProperty('--y-end', `${yEnd}px`);
-
-                fireworksContainer.appendChild(particle);
-                setTimeout(() => {
-                    particle.remove();
-                }, 1200);
-            }
-        }
-
-        function launchFireworks() {
-            if (gameState.fireworksInterval) {
-                clearInterval(gameState.fireworksInterval);
-            }
-            fireworksContainer.style.display = 'block';
-            gameState.fireworksInterval = setInterval(createFirework, 500);
-        }
-
-        // --- AI and UI Functions ---
+        // --- NEW/UPDATED AI and UI Functions ---
 
         function addMessageToChat(message, sender) {
             const chatDisplay = getEl('ai-chat-display');
