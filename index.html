@@ -140,20 +140,18 @@
             position: absolute;
             width: 4px;
             height: 4px;
-            opacity: 0; /* Animation starts it */
+            opacity: 0;
             animation: firework-anim 1.2s ease-out forwards;
         }
         @keyframes firework-anim {
             0% {
                 opacity: 1;
                 transform: scale(0.3);
-                /* Concentric rings start clustered */
                 box-shadow: 0 0 5px 3px gold, 0 0 0 5px var(--p2-color), 0 0 0 10px var(--p1-color), 0 0 0 15px #ffafcc;
             }
             100% {
                 opacity: 0;
                 transform: scale(1.5);
-                /* Rings expand and fade by having their spread radius grow and color become transparent */
                 box-shadow: 0 0 10px 20px transparent, 0 0 0 30px transparent, 0 0 0 50px transparent, 0 0 0 70px transparent;
             }
         }
@@ -210,7 +208,6 @@
         }
         .modal-close-button:hover { color: white; }
 
-        /* --- Mobile Responsiveness --- */
         @media (max-width: 768px) {
             :root {
                 --cell-size: 45px;
@@ -235,6 +232,7 @@
     <div class="game-container">
         <div id="p1_panel" class="info-panel">
             <h2><div id="p1_swatch" class="color-swatch"></div> <span id="p1_header"></span></h2>
+            <p>Difficulty: <b id="p1_difficulty"></b></p>
             <p>D20 Numbers: <b id="p1_die_type"></b></p>
             <p>Pieces in Reserve: <b id="p1_reserve"></b></p>
             <p>Opponents Captured:</p>
@@ -257,6 +255,7 @@
         </div>
         <div id="p2_panel" class="info-panel">
             <h2><div id="p2_swatch" class="color-swatch"></div> <span id="p2_header"></span></h2>
+            <p>Difficulty: <b id="p2_difficulty"></b></p>
             <p>D20 Numbers: <b id="p2_die_type"></b></p>
             <p>Pieces in Reserve: <b id="p2_reserve"></b></p>
             <p>Opponents Captured:</p>
@@ -382,7 +381,6 @@
         };
         const isOutOfBounds = (r, c) => r < 0 || r >= gameState.boardSize.rows || c < 0 || c >= gameState.boardSize.cols;
        
-        // --- NEW --- Helper function to format coordinates
         const formatCoords = (r, c) => `(${{0:'A', 1:'B', 2:'C', 3:'D', 4:'E'}[r]}, ${c + 1})`;
 
         function isOwnCrownSpace(player, r, c) {
@@ -392,13 +390,11 @@
 
         function movePieceOnBoard(piece, newR, newC) {
             if (!piece) return;
-            // --- UPDATED --- Implement Forfeit Rule
             if (isOwnCrownSpace(piece.owner, newR, newC)) {
-                console.error(`FORFEIT: Player ${piece.owner} moved to their own crown space at ${formatCoords(newR, newC)}.`);
                 const winner = piece.owner === 'p1' ? 'p2' : 'p1';
                 const loserName = piece.owner === 'p1' ? 'You' : 'The Bot';
                 setWinner(winner, `${loserName} moved onto their own crown space and forfeited the game!`);
-                return; // Stop further execution
+                return;
             }
             const oldPos = piece.position;
             if(oldPos && gameState.board[oldPos.r] && gameState.board[oldPos.r][oldPos.c] === piece.id) {
@@ -421,6 +417,11 @@
             p2Panel.classList.toggle('active-turn-panel', gameState.turn === 'p2');
             getEl('p1_header').textContent = `Player 1`;
             getEl('p2_header').textContent = `Player 2 (Bot)`;
+           
+            const difficulty = gameState.isHardMode ? 'Hard' : 'Normal';
+            getEl('p1_difficulty').textContent = gameState.isHardMode === null ? 'N/A' : difficulty;
+            getEl('p2_difficulty').textContent = gameState.isHardMode === null ? 'N/A' : difficulty;
+
             getEl('p1_die_type').textContent = gameState.players.p1.dieType ? gameState.players.p1.dieType.charAt(0).toUpperCase() + gameState.players.p1.dieType.slice(1) : 'N/A';
             getEl('p2_die_type').textContent = gameState.players.p2.dieType ? gameState.players.p2.dieType.charAt(0).toUpperCase() + gameState.players.p2.dieType.slice(1) : 'N/A';
             getEl('p1_reserve').textContent = gameState.players.p1.piecesInReserve;
@@ -453,7 +454,6 @@
                 colHeadersElement.appendChild(label);
             }
             rowHeadersElement.innerHTML = '';
-             // --- UPDATED --- Use letters for row headers
             const rowLabels = ['A', 'B', 'C', 'D', 'E'];
             for (let r = 0; r < gameState.boardSize.rows; r++) {
                 const label = document.createElement('div');
@@ -508,7 +508,8 @@
                     group.innerHTML = '<b>Choose Color:</b>';
                     colors.forEach(color => {
                         const button = document.createElement('button');
-                        button.textContent = color === '#0096C7' ? 'Cerulean' : 'Orange';
+                        // --- THIS IS THE CHANGED LINE ---
+                        button.textContent = color === '#0096C7' ? 'Blue' : 'Orange';
                         button.onclick = () => chooseColor(color);
                         group.appendChild(button);
                     });
@@ -569,16 +570,11 @@
 
         function initializeGame() {
             document.body.classList.remove('game-over');
-            const loserAnimationContainer = getEl('loserAnimation');
-            loserAnimationContainer.style.display = 'none';
-            loserAnimationContainer.innerHTML = '<div class="loser-icon">😭</div>';
-
-            const fireworksContainer = getEl('fireworks-container');
-            if (fireworksContainer) {
-                fireworksContainer.style.display = 'none';
-                fireworksContainer.innerHTML = '';
-            }
-
+            getEl('loserAnimation').style.display = 'none';
+            getEl('loserAnimation').innerHTML = '<div class="loser-icon">😭</div>';
+            getEl('fireworks-container').style.display = 'none';
+            getEl('fireworks-container').innerHTML = '';
+           
             gameState = {
                 boardSize: { rows: 5, cols: 7 },
                 board: Array(5).fill(0).map(() => Array(7).fill(null)),
@@ -587,17 +583,28 @@
                     p1: { id: 'p1', color: null, dieType: null, piecesInReserve: 12, capturedOpponentPieces: 0 },
                     p2: { id: 'p2', color: null, dieType: null, piecesInReserve: 12, capturedOpponentPieces: 0 }
                 },
-                // Player 2 starts on Row A (index 0), Player 1 on Row E (index 4)
                 crownSpaces: { p1: { row: 4, col: 3 }, p2: { row: 0, col: 3 } },
-                turn: null, gamePhase: 'SETUP_D20_ROLL', winner: null,
-                message: "Let's begin! Roll to start the game.",
+                turn: null, gamePhase: 'SETUP_DIFFICULTY', winner: null,
+                isHardMode: null,
+                message: "Choose your difficulty.",
                 rollMessage: '', selectedPieceId: null,
                 highlightedMoves: [], highlightedAttacks: [], highlightedPlacements: [], highlightedPendingAttack: null, highlightedDoubleStackAttacks: [],
                 pendingAttack: null, pendingDoubleStackAttack: null, pieceToCrownId: null,
                 pendingMultiRoll: null,
-                actions: [{ text: 'Roll to Start Game', onClick: setupRollOff }]
+                actions: [
+                    { text: 'Normal Mode', onClick: () => setDifficulty(false) },
+                    { text: 'Hard Mode', onClick: () => setDifficulty(true) },
+                ]
             };
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+            render();
+        }
+
+        function setDifficulty(isHard) {
+            gameState.isHardMode = isHard;
+            gameState.gamePhase = 'SETUP_D20_ROLL';
+            gameState.message = "Let's begin! Roll to start the game.";
+            gameState.actions = [{ text: 'Roll to Start Game', onClick: setupRollOff }];
             render();
         }
        
@@ -657,7 +664,6 @@
             if (firstPlayer === 'p2') {
                 placeBotStartingPieces();
                 gameState.placingPlayer = 'p1';
-                 // --- UPDATED --- Use letter for row name
                 gameState.message = "Bot has placed its pieces. Now, place your 4 pieces on your starting row (Row E).";
             } else {
                 gameState.message = 'Your turn to place 4 pieces on your starting row (Row E).';
@@ -669,7 +675,6 @@
         function highlightPlacementSpots() {
             gameState.highlightedPlacements = [];
             const player = gameState.placingPlayer;
-            // Player 1 starts on row 4 (E), Player 2 on row 0 (A)
             const startRow = player === 'p1' ? gameState.boardSize.rows - 1 : 0;
             for (let c = 0; c < gameState.boardSize.cols; c++) {
                 if (!isOwnCrownSpace(player, startRow, c) && gameState.board[startRow][c] === null) {
@@ -695,7 +700,7 @@
         }
        
         function placeBotStartingPieces() {
-            const startRow = 0; // Bot starts on row A (index 0)
+            const startRow = 0;
             const validCols = [];
             for (let c = 0; c < gameState.boardSize.cols; c++) {
                  if (!isOwnCrownSpace('p2', startRow, c)) {
@@ -740,7 +745,6 @@
                 const {r, c} = piece.position;
                 const opponentCrownSpace = (piece.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
                
-                // Calculate valid moves
                 const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
                 gameState.highlightedMoves = moves.filter(m => {
                     const isOpponentCrown = (m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col);
@@ -748,13 +752,11 @@
                     return !isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c);
                 });
                
-                // Calculate valid attacks
                 const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
                 gameState.highlightedAttacks = [];
                 gameState.highlightedDoubleStackAttacks = [];
                 let hasDoubleStackAttack = false;
 
-                // Regular single-jump attacks
                 for (const dir of attackDirs) {
                     const targetPos = {r: r + dir.dr, c: c + dir.dc};
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
@@ -767,7 +769,6 @@
                     }
                 }
 
-                // Double-stack attacks (for crowned pieces only)
                 if (piece.isCrowned) {
                     for (const dir1 of attackDirs) {
                         const opponent1Pos = { r: r + dir1.dr, c: c + dir1.dc };
@@ -872,7 +873,6 @@
         function executeMove(pieceId, r, c) {
             const piece = getPiece(pieceId);
             movePieceOnBoard(piece, r, c);
-            // Check for forfeit is now inside movePieceOnBoard, if a winner is decided, stop.
             if(gameState.winner) return;
 
             const oppCrown = gameState.crownSpaces[piece.owner === 'p1' ? 'p2' : 'p1'];
@@ -895,8 +895,8 @@
             const defender = !isDoubleStack ? getPieceAt(attackData.targetPos.r, attackData.targetPos.c) : null;
            
             let numRolls = 1;
-            if (!isDoubleStack && attacker.isCrowned && defender.isCrowned) numRolls = 7;
-            else if (!isDoubleStack && !attacker.isCrowned && defender.isCrowned) numRolls = 3;
+            if (!isDoubleStack && attacker.isCrowned && defender?.isCrowned) numRolls = 7;
+            else if (!isDoubleStack && !attacker.isCrowned && defender?.isCrowned) numRolls = 3;
 
             if (numRolls === 1) {
                 const roll = await showDiceRoll(`${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} Attacking...`);
@@ -917,7 +917,7 @@
                     gameState.board[attackData.targetPos.r][attackData.targetPos.c] = null;
                     gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
                     movePieceOnBoard(attacker, attackData.landingPos.r, attackData.landingPos.c);
-                    if(gameState.winner) return; // Forfeit check
+                    if(gameState.winner) return;
                     const oppCrown = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
                     if (attackData.landingPos.r === oppCrown.row && attackData.landingPos.c === oppCrown.col) {
                         enterCrowningPhase(attacker.id);
@@ -980,14 +980,14 @@
             const defender = getPieceAt(attackData.targetPos.r, attackData.targetPos.c);
             let message = "";
 
-            if (rollsNeeded === 3) { // Single vs Crowned
+            if (rollsNeeded === 3) {
                 if (successes >= 2) {
                     defender.isCrowned = false;
                     message = `Attack successful! (${successes}/3) Defender is uncrowned.`;
                 } else {
                     message = `Attack failed! (${successes}/3) Defender is safe.`;
                 }
-            } else if (rollsNeeded === 7) { // Crowned vs Crowned
+            } else if (rollsNeeded === 7) {
                 if (successes >= 4) {
                     defender.isCrowned = false;
                     message = `Crowned attack successful! (${successes} vs ${defenderSuccesses}) Defender is uncrowned.`;
@@ -1007,7 +1007,6 @@
             const attacker = getPiece(pieceId);
            
             if (!attacker || !path || !landingPos) {
-                console.error("Could not resolve double stack attack, missing data.", attackData);
                 endTurn();
                 return;
             }
@@ -1121,14 +1120,18 @@
                      setTimeout(() => { crownModal.classList.remove('visible'); resolveCrowning('none'); }, 2500);
                 }
                 crownModal.classList.add('visible');
-            } else {
+            } else { // Bot's Crowning Choice
                 setTimeout(() => {
+                    if (hasReserves && (gameState.isHardMode || Math.random() < 0.25)) {
+                        resolveCrowning('crown');
+                        return;
+                    }
                     const ownCrownSpace = gameState.crownSpaces.p2;
                     const leftSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col-1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
                     const rightSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col+1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
                     const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
                    
-                    if (canReinforce && Math.random() > 0.5) {
+                    if (canReinforce) {
                         const availableDirections = [];
                         if (leftSpotFree) availableDirections.push('left');
                         if (rightSpotFree) availableDirections.push('right');
@@ -1158,8 +1161,9 @@
                 const placementCol = direction === 'left' ? ownCrownSpace.col - 1 : ownCrownSpace.col + 1;
                
                 const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
-                gameState.pieces.push({ id: newId, owner: player, isCrowned: false, position: { r: ownCrownSpace.row, c: placementCol } });
-                movePieceOnBoard(getPiece(newId), ownCrownSpace.row, placementCol);
+                const newPiece = { id: newId, owner: player, isCrowned: false, position: null };
+                gameState.pieces.push(newPiece);
+                movePieceOnBoard(newPiece, ownCrownSpace.row, placementCol);
                 playerObj.piecesInReserve--;
                 gameState.message = `${player === 'p1' ? 'You' : "The Bot"} placed a reinforcement to the ${direction} of ${player === 'p1' ? 'your' : "its"} crown.`;
             } else {
@@ -1193,7 +1197,6 @@
             if (winner === 'p1') {
                 loserAnimationContainer.style.display = 'none';
                 fireworksContainer.style.display = 'block';
-
                 const numFireworks = 25;
                 for (let i = 0; i < numFireworks; i++) {
                     const firework = document.createElement('div');
@@ -1243,46 +1246,162 @@
             gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
             gameState.message = `${gameState.turn === 'p1' ? 'Your' : "Bot's"} turn to move.`;
             render();
-            if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 2000);
+            if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 1500);
         }
        
+        // --- BOT AI LOGIC ---
+
         function botTurn() {
-            if(gameState.winner) return; // Don't let bot move if game is over
+            if(gameState.winner) return;
+            if (gameState.isHardMode) {
+                botTurnHard();
+            } else {
+                botTurnNormal();
+            }
+        }
+
+        function botTurnNormal() {
             const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
-            let possibleActions = [];
+            let scoredActions = [];
+
             myPieces.forEach(piece => {
                 const {r, c} = piece.position;
-                const opponentCrownSpace = gameState.crownSpaces.p1;
-
+               
                 const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
                 moves.forEach(m => {
-                     if (piece.isCrowned && m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) return;
                     if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace('p2', m.r, m.c)) {
-                        possibleActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c });
+                        let score = 1;
+                        if(m.r > r) score += 5;
+                        scoredActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c, score });
                     }
                 });
-                const attacks = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
-                for (const dir of attacks) {
+
+                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
+                for (const dir of attackDirs) {
                     const targetPos = {r: r + dir.dr, c: c + dir.dc};
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     const targetPiece = getPieceAt(targetPos.r, targetPos.c);
                    
-                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c);
+                    if(targetPiece && targetPiece.owner === 'p1' && !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c)){
+                        let score = 10;
+                        if (targetPiece.isCrowned) score += 5;
+                        scoredActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos, score });
+                    }
+                }
+            });
+           
+            if (scoredActions.length > 0) {
+                scoredActions.sort((a,b) => b.score - a.score);
+                const bestAction = scoredActions[0];
+                if (bestAction.type === 'move') {
+                    executeMove(bestAction.pieceId, bestAction.r, bestAction.c);
+                } else {
+                    gameState.pendingAttack = bestAction;
+                    startAttack();
+                }
+            } else {
+                gameState.message = "Bot has no valid moves.";
+                setTimeout(endTurn, 1500);
+            }
+        }
+
+        function isSquareThreatenedBy(square, opponentPlayerId) {
+            const attackDirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+            for (const dir of attackDirs) {
+                const potentialAttackerPos = { r: square.r + dir.dr, c: square.c + dir.dc };
+                const potentialJumpFromPos = { r: square.r - dir.dr, c: square.c - dir.dc };
+
+                const pieceToJumpOver = getPieceAt(potentialAttackerPos.r, potentialAttackerPos.c);
+                const jumpingPiece = getPieceAt(potentialJumpFromPos.r, potentialJumpFromPos.c);
+
+                if (jumpingPiece && jumpingPiece.owner === opponentPlayerId && pieceToJumpOver && pieceToJumpOver.owner !== opponentPlayerId && !isOutOfBounds(square.r, square.c) && !getPieceAt(square.r, square.c)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function botTurnHard() {
+            const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
+            const opponentCrownSpace = gameState.crownSpaces.p1;
+            let scoredActions = [];
+
+            myPieces.forEach(piece => {
+                const {r, c} = piece.position;
+                const isCrowned = piece.isCrowned;
+
+                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                moves.forEach(m => {
+                    if (isCrowned && m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) return;
+                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace('p2', m.r, m.c)) {
+                        let score = 0;
+                        if (m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) {
+                            score = 1000;
+                        } else {
+                            score = (m.r - r) * 15;
+                            score += (4 - m.r);
+                        }
+                       
+                        if (isSquareThreatenedBy(m, 'p1')) {
+                            score -= 500;
+                        }
+                        scoredActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c, score });
+                    }
+                });
+
+                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
+                for (const dir of attackDirs) {
+                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
+                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
+                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
                    
-                    if(targetPiece && targetPiece.owner === 'p1' && isValidLanding){
-                        possibleActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos });
+                    if(targetPiece && targetPiece.owner === 'p1' && !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c)){
+                        let score = 75;
+                        if (targetPiece.isCrowned) score += 50;
+                        score += targetPiece.position.r * 5;
+                        if (isSquareThreatenedBy(landingPos, 'p1')) score -= 500;
+                        scoredActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos, score });
+                    }
+                }
+
+                 if (isCrowned) {
+                    for (const dir1 of attackDirs) {
+                        const opponent1Pos = { r: r + dir1.dr, c: c + dir1.dc };
+                        const landing1Pos = { r: r + dir1.dr * 2, c: c + dir1.dc * 2 };
+                        const opponent1 = getPieceAt(opponent1Pos.r, opponent1Pos.c);
+                        if (opponent1 && opponent1.owner === 'p1' && !isOutOfBounds(landing1Pos.r, landing1Pos.c) && !getPieceAt(landing1Pos.r, landing1Pos.c) && !isOwnCrownSpace('p2', landing1Pos.r, landing1Pos.c)) {
+                            for (const dir2 of attackDirs) {
+                                const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: landing1Pos.c + dir2.dc };
+                                const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: landing1Pos.c + dir2.dc * 2 };
+                                const opponent2 = getPieceAt(opponent2Pos.r, opponent2Pos.c);
+                                if (opponent2 && opponent2.owner === 'p1' && opponent2.id !== opponent1.id && !isOutOfBounds(landing2Pos.r, landing2Pos.c) && !getPieceAt(landing2Pos.r, landing2Pos.c) && !isOwnCrownSpace('p2', landing2Pos.r, landing2Pos.c)) {
+                                    let score = 1;
+                                     if (isSquareThreatenedBy(landing1Pos, 'p1') || isSquareThreatenedBy(landing2Pos, 'p1')) score -= 500;
+                                    scoredActions.push({ type: 'double-stack', pieceId: piece.id, path: { opponent1: opponent1Pos, landing1: landing1Pos, opponent2: opponent2Pos }, landingPos: landing2Pos, score });
+                                }
+                            }
+                        }
                     }
                 }
             });
 
-            if (possibleActions.length > 0) {
-                const attackActions = possibleActions.filter(a => a.type === 'attack');
-                const moveActions = possibleActions.filter(a => a.type === 'move');
-                const chosenAction = attackActions.length > 0 ? attackActions[Math.floor(Math.random() * attackActions.length)] : moveActions[Math.floor(Math.random() * moveActions.length)];
-               
-                if (chosenAction.type === 'move') { executeMove(chosenAction.pieceId, chosenAction.r, chosenAction.c); }
-                else { gameState.pendingAttack = chosenAction; startAttack(); }
-            } else { gameState.message = "Bot has no valid moves."; setTimeout(endTurn, 1500); }
+            if (scoredActions.length > 0) {
+                scoredActions.sort((a,b) => b.score - a.score);
+                const bestAction = scoredActions[0];
+
+                if (bestAction.type === 'move') {
+                    executeMove(bestAction.pieceId, bestAction.r, bestAction.c);
+                } else if (bestAction.type === 'attack') {
+                    gameState.pendingAttack = bestAction;
+                    startAttack();
+                } else if (bestAction.type === 'double-stack') {
+                    gameState.pendingDoubleStackAttack = { pieceId: bestAction.pieceId, path: bestAction.path, landingPos: bestAction.landingPos };
+                    startAttack();
+                }
+            } else {
+                gameState.message = "Bot has no valid moves.";
+                setTimeout(endTurn, 1500);
+            }
         }
 
         function showDiceRoll(title) {
@@ -1344,7 +1463,6 @@
                     const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
                     let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
                     if(targetPiece && targetPiece.owner === opponentId && isValidLanding){
-                        // --- UPDATED --- Use formatted coords for AI help
                        possibleActions.push({ text: `Attack piece at ${formatCoords(targetPos.r, targetPos.c)}`, score: 3 });
                     }
                 }
@@ -1353,14 +1471,13 @@
                 moveOffsets.forEach(m => {
                     if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c)) {
                         let score = 1;
-                        if (m.r < r) score = 2; // Prioritize forward movement
-                        // --- UPDATED --- Use formatted coords for AI help
+                        if (m.r < r) score = 2;
                         possibleActions.push({ text: `Move to ${formatCoords(m.r, m.c)}`, score: score });
                     }
                 });
 
                 if (possibleActions.length === 0) {
-                     addMessageToChat(`The selected piece at ${formatCoords(c, r)} has no available moves or attacks.`, 'ai');
+                     addMessageToChat(`The selected piece at ${formatCoords(r, c)} has no available moves or attacks.`, 'ai');
                 } else {
                     possibleActions.sort((a, b) => b.score - a.score);
                     let response = `For your piece at ${formatCoords(r, c)}, here are your options:<ul>`;
