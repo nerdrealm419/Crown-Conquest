@@ -267,7 +267,7 @@
     <div id="dice-modal" class="modal"><div id="dice-modal-content" class="modal-content"><h3 id="dice-title">Rolling...</h3><div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div><div id="dice-results"></div></div></div>
     <div id="victoryModal" class="modal"><div id="victoryContent" class="modal-content"><div id="fireworks-container"></div><div id="loserAnimation" style="display: none;"><div class="loser-icon">😭</div></div><h2 id="victoryTitle"></h2><p id="victoryMessage"></p><div id="victoryActions"></div></div></div>
     <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>You may Double-Stack this piece or place a Reinforcement from your reserve.</p><p>Reserve: <b id="crown-modal-reserve-count">X</b></p><div id="crownChoiceActions"></div></div></div>
-    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><p>Place a new piece to the left or right of your Crown Space.</p><div id="reinforceChoiceActions"></div></div></div>
+    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><p>Choose which side of your crown to place the new piece. The original piece will move to the opposite side of your starting row.</p><div id="reinforceChoiceActions"></div></div></div>
     <div id="quitConfirmModal" class="modal"><div class="modal-content"><h3>Quit Game?</h3><p>Are you sure you want to forfeit? This will count as a loss.</p><div id="quitConfirmActions"><button id="quitConfirmYes">Yes, I Quit</button><button id="quitConfirmNo">No, Keep Playing</button></div></div></div>
 
     <!-- Floating Buttons and their Modals -->
@@ -278,6 +278,7 @@
         <ul>
             <li>Eliminate all of your opponent's pieces.</li>
             <li>Successfully create four crowned (double-stacked) pieces.</li>
+            <li>Force your opponent into a position where they have no legal moves.</li>
         </ul>
 
         <h3>2. Game Components & Setup</h3>
@@ -306,7 +307,14 @@
             <li>When a regular piece reaches the opponent's crown space, you get a choice (if you have reserve pieces):
                 <ol>
                     <li><b>Double-Stack:</b> Take a piece from your reserve and place it on top, creating a "Crowned" piece. This uses one reserve piece.</li>
-                    <li><b>Reinforce:</b> Place a new, un-crowned piece from your reserve onto an empty space to the left or right of your OWN crown space. This uses one reserve piece.</li>
+                    <li><b>Reinforce:</b> This is a two-part move.
+                        <ol style="margin-top: 5px;">
+                            <li>First, you place a new piece from your reserve onto an empty space to the left or right of your <b>OWN</b> crown space.</li>
+                            <li>Second, the piece that just reached the opponent's crown space is immediately moved back to your starting row. It is placed on the opposite side of your crown from where you placed the new piece.</li>
+                            <li><b>Bumping:</b> If a target space for either piece is occupied, it will be placed in the next available empty space on that row, moving outwards from the crown.</li>
+                            <li>This option is only available if there are valid empty spots for <b>both</b> the new piece and the relocated original piece.</li>
+                        </ol>
+                    </li>
                 </ol>
             </li>
             <li>A piece can only be double-stacked once.</li>
@@ -328,17 +336,21 @@
         <h4>Chain Jump “Double-Stack Attack”</h4>
         <ul>
             <li>Can only be performed by a <b>crowned</b> piece.</li>
-            <li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a single turn.</li>
-            <li>You must declare the Double-Stack Attack <b>before</b> rolling the die.</li>
-            <li>If the attack roll is successful:
+            <li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a sequence. You must declare the attack before rolling.</li>
+            <li>The attack consists of two separate jumps. The dice roll for <b>each jump</b> is determined by its target:
                 <ul>
-                    <li>Both jumped opponents are captured.</li>
-                    <li>The crowned piece "disassembles" into two regular pieces.</li>
-                    <li>One new piece lands on the empty square after the first opponent.</li>
-                    <li>The second new piece lands on the empty square after the second opponent.</li>
+                    <li>Jumping a single piece: Attacker rolls <b>1d20</b>. A successful roll (matching your Even/Odd type) captures the piece.</li>
+                    <li>Jumping a crowned piece: This is a "Best of 7" contest (<b>7d20</b>). 4+ successes are needed to **un-crown** the defending piece, which remains on the board.</li>
                 </ul>
             </li>
-            <li>The two pieces are now separate, uncrowned units. The entire sequence requires only one successful roll.</li>
+            <li>If any roll in the sequence fails, the entire attack ends immediately, and your turn is over.</li>
+            <li>After both jumps are successful:
+                <ul>
+                    <li>The original attacking piece "disassembles". It becomes a regular (uncrowned) piece and lands on the empty square after the <b>first</b> opponent.</li>
+                    <li>A second regular piece is created and lands on the empty square after the <b>second</b> opponent.</li>
+                    <li>The two pieces are now separate units.</li>
+                </ul>
+            </li>
         </ul>
 
         <h3>5. Die Roll for Attack & Defense</h3>
@@ -373,13 +385,13 @@
 
         const getEl = (id) => document.getElementById(id);
         const rollD20 = () => Math.floor(Math.random() * 20) + 1;
-        const getPiece = (id) => gameState.pieces.find(p => p.id === id);
-        const getPieceAt = (r, c) => {
-            if (isOutOfBounds(r,c)) return null;
-            const pieceId = gameState.board[r][c];
-            return pieceId ? getPiece(pieceId) : null;
+        const getPiece = (id, gState = gameState) => gState.pieces.find(p => p.id === id);
+        const getPieceAt = (r, c, gState = gameState) => {
+            if (isOutOfBounds(r,c, gState)) return null;
+            const pieceId = gState.board[r][c];
+            return pieceId ? gState.pieces.find(p => p.id === pieceId) : null;
         };
-        const isOutOfBounds = (r, c) => r < 0 || r >= gameState.boardSize.rows || c < 0 || c >= gameState.boardSize.cols;
+        const isOutOfBounds = (r, c, gState = gameState) => r < 0 || r >= gState.boardSize.rows || c < 0 || c >= gState.boardSize.cols;
        
         const formatCoords = (r, c) => `(${{0:'A', 1:'B', 2:'C', 3:'D', 4:'E'}[r]}, ${c + 1})`;
 
@@ -427,7 +439,7 @@
             getEl('p1_reserve').textContent = gameState.players.p1.piecesInReserve;
             getEl('p2_reserve').textContent = gameState.players.p2.piecesInReserve;
             const p1CapturedContainer = getEl('p1_captured_display');
-            p1CapturedContainer.innerHTML = '';
+p1CapturedContainer.innerHTML = '';
             for (let i = 0; i < gameState.players.p1.capturedOpponentPieces; i++) {
                 const capturedEl = document.createElement('div');
                 capturedEl.className = 'captured-icon';
@@ -508,7 +520,6 @@
                     group.innerHTML = '<b>Choose Color:</b>';
                     colors.forEach(color => {
                         const button = document.createElement('button');
-                        // --- THIS IS THE CHANGED LINE ---
                         button.textContent = color === '#0096C7' ? 'Blue' : 'Orange';
                         button.onclick = () => chooseColor(color);
                         group.appendChild(button);
@@ -723,7 +734,8 @@
             gameState.highlightedPlacements = [];
             if (gameState.turn === 'p2') {
                 gameState.message = `Bot moves first.`;
-                setTimeout(botTurn, 1000);
+                const delay = gameState.isHardMode ? 500 : 1000;
+                setTimeout(botTurn, delay);
             } else {
                 gameState.message = `You move first. Select a piece.`;
             }
@@ -781,7 +793,7 @@
                         if (opponent1 && opponent1.owner !== piece.owner && isValidLanding1) {
                             for (const dir2 of attackDirs) {
                                 const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: landing1Pos.c + dir2.dc };
-                                const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: c + dir2.dc * 2 };
+                                const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: landing1Pos.c + dir2.dc * 2 };
                                 const opponent2 = getPieceAt(opponent2Pos.r, opponent2Pos.c);
 
                                 const isOpponentCrown2 = (landing2Pos.r === opponentCrownSpace.row && landing2Pos.c === opponentCrownSpace.col);
@@ -884,33 +896,28 @@
         }
        
         async function startAttack() {
-            const isDoubleStack = !!gameState.pendingDoubleStackAttack;
-            const attackData = isDoubleStack ? gameState.pendingDoubleStackAttack : gameState.pendingAttack;
-            if (!attackData) return;
-
             gameState.actions = [];
             render();
 
+            if (gameState.pendingDoubleStackAttack) {
+                startDoubleStackSequence();
+                return;
+            }
+
+            const attackData = gameState.pendingAttack;
+            if (!attackData) return;
+
             const attacker = getPiece(attackData.pieceId);
-            const defender = !isDoubleStack ? getPieceAt(attackData.targetPos.r, attackData.targetPos.c) : null;
+            const defender = getPieceAt(attackData.targetPos.r, attackData.targetPos.c);
            
             let numRolls = 1;
-            if (!isDoubleStack && attacker.isCrowned && defender?.isCrowned) numRolls = 7;
-            else if (!isDoubleStack && !attacker.isCrowned && defender?.isCrowned) numRolls = 3;
+            if (attacker.isCrowned && defender?.isCrowned) numRolls = 7;
+            else if (!attacker.isCrowned && defender?.isCrowned) numRolls = 3;
 
             if (numRolls === 1) {
                 const roll = await showDiceRoll(`${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} Attacking...`);
                 const isSuccess = (gameState.players[attacker.owner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attacker.owner].dieType === 'odd' && roll % 2 !== 0);
                
-                if (isDoubleStack) {
-                    if (isSuccess) { resolveDoubleStackAttack(attackData); }
-                    else {
-                        gameState.message = "Double-Stack Attack failed! The attack was unsuccessful.";
-                        setTimeout(endTurn, 2000);
-                    }
-                    return;
-                }
-
                 if(isSuccess) {
                     gameState.message = "Attack successful!";
                     gameState.players[attacker.owner].capturedOpponentPieces++;
@@ -929,7 +936,7 @@
                     setTimeout(endTurn, 2000);
                 }
             } else {
-                gameState.pendingMultiRoll = { attackData, rollsNeeded: numRolls, rollsMade: 0, successes: 0, defenderSuccesses: 0 };
+                gameState.pendingMultiRoll = { attackData, rollsNeeded: numRolls, rollsMade: 0, successes: 0, defenderSuccesses: 0, onComplete: resolveMultiRollAttack };
                 gameState.message = `Attack initiated! Need to roll ${numRolls} dice.`;
                 gameState.rollMessage = `Successes: 0 / ${numRolls} rolls made`;
                 if(gameState.turn === 'p1') {
@@ -945,14 +952,14 @@
             const multiRoll = gameState.pendingMultiRoll;
             gameState.actions = [];
             render();
-
-            const attackerId = getPiece(multiRoll.attackData.pieceId).owner;
-            const defenderId = attackerId === 'p1' ? 'p2' : 'p1';
-            const roll = await showDiceRoll(`${attackerId === 'p1' ? 'Player 1' : 'Bot'} rolling...`);
+           
+            const attackerOwner = multiRoll.attackData.pieceId ? getPiece(multiRoll.attackData.pieceId).owner : gameState.turn;
+            const defenderOwner = attackerOwner === 'p1' ? 'p2' : 'p1';
+            const roll = await showDiceRoll(`${attackerOwner === 'p1' ? 'Player 1' : 'Bot'} rolling...`);
            
             multiRoll.rollsMade++;
-            const isAttackerSuccess = (gameState.players[attackerId].dieType === 'even' && roll % 2 === 0) || (gameState.players[attackerId].dieType === 'odd' && roll % 2 !== 0);
-            const isDefenderSuccess = (gameState.players[defenderId].dieType === 'even' && roll % 2 === 0) || (gameState.players[defenderId].dieType === 'odd' && roll % 2 !== 0);
+            const isAttackerSuccess = (gameState.players[attackerOwner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attackerOwner].dieType === 'odd' && roll % 2 !== 0);
+            const isDefenderSuccess = (gameState.players[defenderOwner].dieType === 'even' && roll % 2 === 0) || (gameState.players[defenderOwner].dieType === 'odd' && roll % 2 !== 0);
 
             if (isAttackerSuccess) multiRoll.successes++;
             if (multiRoll.rollsNeeded === 7 && isDefenderSuccess) multiRoll.defenderSuccesses++;
@@ -963,7 +970,10 @@
             gameState.rollMessage = successMsg;
 
             if (multiRoll.rollsMade >= multiRoll.rollsNeeded) {
-                resolveMultiRollAttack();
+                const onCompleteCallback = gameState.pendingMultiRoll.onComplete;
+                if(onCompleteCallback) {
+                    onCompleteCallback();
+                }
             } else {
                 if (gameState.turn === 'p1') {
                     gameState.actions = [{text: `Roll Die (${multiRoll.rollsMade + 1} of ${multiRoll.rollsNeeded})`, onClick: executeSingleRoll}];
@@ -980,14 +990,14 @@
             const defender = getPieceAt(attackData.targetPos.r, attackData.targetPos.c);
             let message = "";
 
-            if (rollsNeeded === 3) {
+            if (rollsNeeded === 3) { // Single vs Crowned
                 if (successes >= 2) {
                     defender.isCrowned = false;
                     message = `Attack successful! (${successes}/3) Defender is uncrowned.`;
                 } else {
                     message = `Attack failed! (${successes}/3) Defender is safe.`;
                 }
-            } else if (rollsNeeded === 7) {
+            } else if (rollsNeeded === 7) { // Crowned vs Crowned
                 if (successes >= 4) {
                     defender.isCrowned = false;
                     message = `Crowned attack successful! (${successes} vs ${defenderSuccesses}) Defender is uncrowned.`;
@@ -1002,49 +1012,104 @@
             setTimeout(endTurn, 2500);
         }
 
-        function resolveDoubleStackAttack(attackData) {
-            const { pieceId, path, landingPos } = attackData;
+        async function startDoubleStackSequence() {
+            gameState.pendingDoubleStackAttack.stage = 1;
+            executeNextDoubleStackJump();
+        }
+
+        async function executeNextDoubleStackJump() {
+            const { pieceId, path, stage } = gameState.pendingDoubleStackAttack;
             const attacker = getPiece(pieceId);
-           
-            if (!attacker || !path || !landingPos) {
-                endTurn();
+            const defenderPos = (stage === 1) ? path.opponent1 : path.opponent2;
+            const defender = getPieceAt(defenderPos.r, defenderPos.c);
+
+            if (!defender) {
+                gameState.message = "Error: Target piece for jump not found.";
+                setTimeout(endTurn, 2000);
                 return;
             }
 
-            const { opponent1, landing1, opponent2 } = path;
-            const landing2 = landingPos;
+            gameState.message = `Double-Stack Attack: Stage ${stage} of 2.`;
+            gameState.rollMessage = `Jumping piece at ${formatCoords(defenderPos.r, defenderPos.c)}.`;
+            render();
 
-            const defender1 = getPieceAt(opponent1.r, opponent1.c);
-            const defender2 = getPieceAt(opponent2.r, opponent2.c);
-
-            gameState.board[opponent1.r][opponent1.c] = null;
-            gameState.board[opponent2.r][opponent2.c] = null;
-            gameState.pieces = gameState.pieces.filter(p => p.id !== defender1.id && p.id !== defender2.id);
-            gameState.players[attacker.owner].capturedOpponentPieces += 2;
-
-            gameState.board[attacker.position.r][attacker.position.c] = null;
+            const isDefenderCrowned = defender.isCrowned;
+            const numRolls = isDefenderCrowned ? 7 : 1;
            
-            attacker.isCrowned = false;
-            attacker.position = null;
-            movePieceOnBoard(attacker, landing1.r, landing1.c);
-            if(gameState.winner) return;
+            if (numRolls === 1) {
+                const roll = await showDiceRoll(`${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} attacking...`);
+                const isSuccess = (gameState.players[attacker.owner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attacker.owner].dieType === 'odd' && roll % 2 !== 0);
+                resolveCurrentDoubleStackJump(isSuccess);
+            } else { // numRolls === 7
+                gameState.pendingMultiRoll = {
+                    attackData: { pieceId: attacker.id, targetPos: defenderPos },
+                    rollsNeeded: 7,
+                    rollsMade: 0,
+                    successes: 0,
+                    defenderSuccesses: 0,
+                    onComplete: () => {
+                        const { successes, defenderSuccesses } = gameState.pendingMultiRoll;
+                        const wasSuccess = successes >= 4 && defenderSuccesses < 4;
+                        resolveCurrentDoubleStackJump(wasSuccess);
+                    }
+                };
+                gameState.message = `Double-Stack Attack (Stage ${stage}): Crowned target! Best of 7 rolls.`;
+                if(gameState.turn === 'p1') {
+                    gameState.actions = [{text: `Roll Die (1 of 7)`, onClick: executeSingleRoll}];
+                } else { setTimeout(executeSingleRoll, 1000); }
+                render();
+            }
+        }
 
-            const newPieceId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
-            const newPiece = { id: newPieceId, owner: attacker.owner, isCrowned: false, position: null };
-            gameState.pieces.push(newPiece);
-            movePieceOnBoard(newPiece, landing2.r, landing2.c);
-            if(gameState.winner) return;
-
-
-            gameState.message = "Double-Stack Attack successful! The piece split and captured two opponents.";
-           
-            const oppCrown = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
-            if (landing1.r === oppCrown.row && landing1.c === oppCrown.col) {
-                enterCrowningPhase(attacker.id);
-            } else if (newPiece.position.r === oppCrown.row && newPiece.position.c === oppCrown.col) {
-                enterCrowningPhase(newPiece.id);
-            } else {
+        function resolveCurrentDoubleStackJump(wasSuccess) {
+            const { pieceId, path, stage } = gameState.pendingDoubleStackAttack;
+            if (!wasSuccess) {
+                gameState.message = `Double-Stack Attack failed at Stage ${stage}.`;
+                gameState.rollMessage = "The attack ends.";
                 setTimeout(endTurn, 2500);
+                return;
+            }
+
+            const attacker = getPiece(pieceId);
+            const defenderPos = (stage === 1) ? path.opponent1 : path.opponent2;
+            const landingPos = (stage === 1) ? path.landing1 : path.landingPos;
+            const defender = getPieceAt(defenderPos.r, defenderPos.c);
+           
+            if (defender.isCrowned) {
+                defender.isCrowned = false;
+                gameState.message = `Jump ${stage} successful! Piece at ${formatCoords(defenderPos.r, defenderPos.c)} was uncrowned.`;
+            } else {
+                gameState.board[defenderPos.r][defenderPos.c] = null;
+                gameState.pieces = gameState.pieces.filter(p => p.id !== defender.id);
+                gameState.players[attacker.owner].capturedOpponentPieces++;
+                gameState.message = `Jump ${stage} successful! Piece at ${formatCoords(defenderPos.r, defenderPos.c)} captured.`;
+            }
+
+            if (stage === 1) {
+                movePieceOnBoard(attacker, landingPos.r, landingPos.c);
+                if (gameState.winner) return;
+                gameState.pendingDoubleStackAttack.stage = 2;
+                render();
+                setTimeout(executeNextDoubleStackJump, 1500);
+            } else { // Stage 2 success - final resolution
+                attacker.isCrowned = false;
+               
+                const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
+                const newPiece = { id: newId, owner: attacker.owner, isCrowned: false, position: null };
+                gameState.pieces.push(newPiece);
+                movePieceOnBoard(newPiece, path.landingPos.r, path.landingPos.c);
+                if (gameState.winner) return;
+
+                gameState.message = "Double-Stack Attack complete! The piece split and handled two opponents.";
+               
+                const oppCrown = (attacker.owner === 'p1') ? gameState.crownSpaces.p2 : gameState.crownSpaces.p1;
+                if (path.landing1.r === oppCrown.row && path.landing1.c === oppCrown.col) {
+                    enterCrowningPhase(attacker.id);
+                } else if (newPiece.position.r === oppCrown.row && newPiece.position.c === oppCrown.col) {
+                    enterCrowningPhase(newPiece.id);
+                } else {
+                    setTimeout(endTurn, 2500);
+                }
             }
         }
        
@@ -1053,27 +1118,45 @@
             const reinforceModal = getEl('reinforceChoiceModal');
             const actionsContainer = getEl('reinforceChoiceActions');
             actionsContainer.innerHTML = '';
-           
-            const player = getPiece(gameState.pieceToCrownId).owner;
-            const ownCrownSpace = gameState.crownSpaces[player];
-            const leftSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col - 1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
-            const rightSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col + 1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
 
-            if (leftSpotFree) {
+            const piece = getPiece(gameState.pieceToCrownId);
+            if (!piece) { endTurn(); return; }
+            const player = piece.owner;
+            const ownCrownSpace = gameState.crownSpaces[player];
+            const startRow = ownCrownSpace.row;
+
+            const newPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+            const relocatedPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+            const canPlaceLeft = newPieceSpotLeft && relocatedPieceSpotRight;
+
+            const newPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+            const relocatedPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+            const canPlaceRight = newPieceSpotRight && relocatedPieceSpotLeft;
+           
+            if (canPlaceLeft) {
                 const leftButton = document.createElement('button');
                 leftButton.textContent = "Place Left";
-                leftButton.onclick = () => { reinforceModal.classList.remove('visible'); resolveCrowning('reinforce', 'left'); };
+                leftButton.onclick = () => {
+                    reinforceModal.classList.remove('visible');
+                    resolveCrowning('reinforce', { newPiecePos: newPieceSpotLeft, relocatedPiecePos: relocatedPieceSpotRight });
+                };
                 actionsContainer.appendChild(leftButton);
             }
-            if (rightSpotFree) {
+            if (canPlaceRight) {
                 const rightButton = document.createElement('button');
                 rightButton.textContent = "Place Right";
-                rightButton.onclick = () => { reinforceModal.classList.remove('visible'); resolveCrowning('reinforce', 'right'); };
+                rightButton.onclick = () => {
+                    reinforceModal.classList.remove('visible');
+                    resolveCrowning('reinforce', { newPiecePos: newPieceSpotRight, relocatedPiecePos: relocatedPieceSpotLeft });
+                };
                 actionsContainer.appendChild(rightButton);
             }
-            if (!leftSpotFree && !rightSpotFree) {
-                actionsContainer.innerHTML = "<p>No available space to place a reinforcement.</p>";
-                setTimeout(() => { reinforceModal.classList.remove('visible'); endTurn(); }, 2000);
+            if (!canPlaceLeft && !canPlaceRight) {
+                actionsContainer.innerHTML = "<p>No available space to place a reinforcement and relocate the original piece.</p>";
+                const okButton = document.createElement('button');
+                okButton.textContent = "OK";
+                okButton.onclick = () => { reinforceModal.classList.remove('visible'); endTurn(); };
+                actionsContainer.appendChild(okButton);
             }
             reinforceModal.classList.add('visible');
         }
@@ -1110,7 +1193,18 @@
                 const reinforceButton = document.createElement('button');
                 reinforceButton.textContent = "Place Reinforcement";
                 reinforceButton.onclick = () => promptReinforceChoice();
-                reinforceButton.disabled = !hasReserves;
+               
+                const ownCrownSpace = gameState.crownSpaces.p1;
+                const startRow = ownCrownSpace.row;
+                const newPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                const relocatedPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                const canPlaceLeft = newPieceSpotLeft && relocatedPieceSpotRight;
+                const newPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                const relocatedPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                const canPlaceRight = newPieceSpotRight && relocatedPieceSpotLeft;
+                const canReinforce = canPlaceLeft || canPlaceRight;
+
+                reinforceButton.disabled = !hasReserves || !canReinforce;
                 actionsContainer.appendChild(reinforceButton);
                
                 if (!hasReserves) {
@@ -1120,52 +1214,77 @@
                      setTimeout(() => { crownModal.classList.remove('visible'); resolveCrowning('none'); }, 2500);
                 }
                 crownModal.classList.add('visible');
+
             } else { // Bot's Crowning Choice
                 setTimeout(() => {
-                    if (hasReserves && (gameState.isHardMode || Math.random() < 0.25)) {
-                        resolveCrowning('crown');
+                    if (!hasReserves) {
+                        resolveCrowning('none');
                         return;
                     }
-                    const ownCrownSpace = gameState.crownSpaces.p2;
-                    const leftSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col-1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col - 1);
-                    const rightSpotFree = !isOutOfBounds(ownCrownSpace.row, ownCrownSpace.col+1) && !getPieceAt(ownCrownSpace.row, ownCrownSpace.col + 1);
-                    const canReinforce = hasReserves && (leftSpotFree || rightSpotFree);
-                   
-                    if (canReinforce) {
-                        const availableDirections = [];
-                        if (leftSpotFree) availableDirections.push('left');
-                        if (rightSpotFree) availableDirections.push('right');
-                        const direction = availableDirections[Math.floor(Math.random() * availableDirections.length)];
-                        resolveCrowning('reinforce', direction);
-                    } else if (hasReserves) {
-                        resolveCrowning('crown');
-                    } else {
-                        resolveCrowning('none');
+
+                    // Bot uses Minimax-like evaluation for this choice too
+                    let bestChoice = 'none';
+                    let bestScore = -Infinity;
+
+                    // Evaluate crowning
+                    const crownState = applyActionToState({type: 'crown', pieceId: pieceId}, 'p2', gameState);
+                    const crownScore = evaluateBoardState(crownState, 'p2');
+                    if (crownScore > bestScore) {
+                        bestScore = crownScore;
+                        bestChoice = 'crown';
                     }
-                }, 1500);
+                   
+                    // Evaluate reinforcing
+                    const ownCrownSpace = gameState.crownSpaces.p2;
+                    const startRow = ownCrownSpace.row;
+                    const placements = [];
+                    const pLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                    const rRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                    if(pLeft && rRight) placements.push({ newPiecePos: pLeft, relocatedPiecePos: rRight });
+                    const pRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                    const rLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                    if(pRight && rLeft) placements.push({ newPiecePos: pRight, relocatedPiecePos: rLeft });
+
+                    let bestReinforceData = null;
+                    for (const placementData of placements) {
+                        const reinforceState = applyActionToState({type: 'reinforce', pieceId: pieceId, placementData}, 'p2', gameState);
+                        const reinforceScore = evaluateBoardState(reinforceState, 'p2');
+                        if (reinforceScore > bestScore) {
+                            bestScore = reinforceScore;
+                            bestChoice = 'reinforce';
+                            bestReinforceData = placementData;
+                        }
+                    }
+
+                    resolveCrowning(bestChoice, bestReinforceData);
+
+                }, 1000);
             }
         }
 
-        function resolveCrowning(choice, direction = null) {
+        function resolveCrowning(choice, placementData = null) {
             const piece = getPiece(gameState.pieceToCrownId);
             if (!piece) { endTurn(); return; }
             const player = piece.owner;
             const playerObj = gameState.players[player];
 
-            if (choice === 'crown') {
+            if (choice === 'crown' && playerObj.piecesInReserve > 0) {
                 piece.isCrowned = true;
                 playerObj.piecesInReserve--;
                 gameState.message = `${player === 'p1' ? 'Your' : "The Bot's"} piece has been Double-Stacked!`;
-            } else if (choice === 'reinforce' && direction) {
-                const ownCrownSpace = gameState.crownSpaces[player];
-                const placementCol = direction === 'left' ? ownCrownSpace.col - 1 : ownCrownSpace.col + 1;
-               
+            } else if (choice === 'reinforce' && placementData && playerObj.piecesInReserve > 0) {
+                const { newPiecePos, relocatedPiecePos } = placementData;
                 const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
                 const newPiece = { id: newId, owner: player, isCrowned: false, position: null };
                 gameState.pieces.push(newPiece);
-                movePieceOnBoard(newPiece, ownCrownSpace.row, placementCol);
+                movePieceOnBoard(newPiece, newPiecePos.r, newPiecePos.c);
+                if(gameState.winner) return;
                 playerObj.piecesInReserve--;
-                gameState.message = `${player === 'p1' ? 'You' : "The Bot"} placed a reinforcement to the ${direction} of ${player === 'p1' ? 'your' : "its"} crown.`;
+
+                movePieceOnBoard(piece, relocatedPiecePos.r, relocatedPiecePos.c);
+                if(gameState.winner) return;
+
+                gameState.message = `${player === 'p1' ? 'You' : "The Bot"} reinforced! A new piece was placed and the original returned.`;
             } else {
                  gameState.message = "No reserve action was taken.";
             }
@@ -1174,12 +1293,27 @@
             endTurn();
         }
 
-        function checkForWin() {
-            if (gameState.pieces.filter(p => p.owner === 'p1').length === 0) { setWinner('p2', 'The Bot eliminated all of your pieces!'); return true; }
-            if (gameState.pieces.filter(p => p.owner === 'p2').length === 0) { setWinner('p1', 'You eliminated all opponent pieces!'); return true; }
-            if (gameState.pieces.filter(p => p.owner === 'p1' && p.isCrowned).length >= 4) { setWinner('p1', 'You have 4 crowned pieces!'); return true; }
-            if (gameState.pieces.filter(p => p.owner === 'p2' && p.isCrowned).length >= 4) { setWinner('p2', 'The Bot has 4 crowned pieces!'); return true; }
-            return false;
+        function checkForWin(gState = gameState) {
+            const p1Pieces = gState.pieces.filter(p => p.owner === 'p1');
+            const p2Pieces = gState.pieces.filter(p => p.owner === 'p2');
+           
+            if (p2Pieces.length === 0) return { winner: 'p1', reason: 'You eliminated all opponent pieces!' };
+            if (p1Pieces.length === 0) return { winner: 'p2', reason: 'The Bot eliminated all of your pieces!' };
+           
+            if (p1Pieces.filter(p => p.isCrowned).length >= 4) return { winner: 'p1', reason: 'You have 4 crowned pieces!' };
+            if (p2Pieces.filter(p => p.isCrowned).length >= 4) return { winner: 'p2', reason: 'The Bot has 4 crowned pieces!' };
+           
+            if (gState.turn && gState.gamePhase === 'PLAYING') {
+                const possibleActions = getAllPossibleActions(gState.turn, gState);
+                if (possibleActions.length === 0) {
+                    const loser = gState.turn;
+                    const winner = loser === 'p1' ? 'p2' : 'p1';
+                    const loserName = loser === 'p1' ? 'You have' : 'The Bot has';
+                    return { winner: winner, reason: `${loserName} no available moves and forfeits the game!` };
+                }
+            }
+
+            return null;
         }
 
         function setWinner(winner, message) {
@@ -1242,152 +1376,45 @@
             gameState.pendingMultiRoll = null;
             gameState.actions = [];
             gameState.rollMessage = '';
-            if (checkForWin()) return;
+
+            let winCondition = checkForWin(gameState);
+            if (winCondition) {
+                setWinner(winCondition.winner, winCondition.reason);
+                return;
+            }
+
             gameState.turn = gameState.turn === 'p1' ? 'p2' : 'p1';
+
+            // Check for trapped player at the start of their new turn
+            winCondition = checkForWin(gameState);
+             if (winCondition) {
+                setWinner(winCondition.winner, winCondition.reason);
+                return;
+            }
+
             gameState.message = `${gameState.turn === 'p1' ? 'Your' : "Bot's"} turn to move.`;
             render();
-            if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') setTimeout(botTurn, 1500);
+            if (gameState.turn === 'p2' && gameState.gamePhase === 'PLAYING') {
+                 const delay = gameState.isHardMode ? 500 : 1200;
+                 setTimeout(botTurn, delay);
+            }
         }
        
-        // --- BOT AI LOGIC ---
+        // --- MINIMAX AI LOGIC ---
 
         function botTurn() {
             if(gameState.winner) return;
-            if (gameState.isHardMode) {
-                botTurnHard();
-            } else {
-                botTurnNormal();
-            }
-        }
+            const depth = gameState.isHardMode ? 4 : 2;
+            gameState.message = `The Bot is thinking... (Depth: ${depth})`;
+            render();
 
-        function botTurnNormal() {
-            const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
-            let scoredActions = [];
+            setTimeout(() => { // Gives the UI time to update message
+                const bestAction = findBestMove(gameState, depth);
 
-            myPieces.forEach(piece => {
-                const {r, c} = piece.position;
-               
-                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                moves.forEach(m => {
-                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace('p2', m.r, m.c)) {
-                        let score = 1;
-                        if(m.r > r) score += 5;
-                        scoredActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c, score });
-                    }
-                });
-
-                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
-                for (const dir of attackDirs) {
-                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
-                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
-                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                   
-                    if(targetPiece && targetPiece.owner === 'p1' && !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c)){
-                        let score = 10;
-                        if (targetPiece.isCrowned) score += 5;
-                        scoredActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos, score });
-                    }
+                if (!bestAction) { // Should be caught by win condition, but for safety
+                    endTurn();
+                    return;
                 }
-            });
-           
-            if (scoredActions.length > 0) {
-                scoredActions.sort((a,b) => b.score - a.score);
-                const bestAction = scoredActions[0];
-                if (bestAction.type === 'move') {
-                    executeMove(bestAction.pieceId, bestAction.r, bestAction.c);
-                } else {
-                    gameState.pendingAttack = bestAction;
-                    startAttack();
-                }
-            } else {
-                gameState.message = "Bot has no valid moves.";
-                setTimeout(endTurn, 1500);
-            }
-        }
-
-        function isSquareThreatenedBy(square, opponentPlayerId) {
-            const attackDirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
-            for (const dir of attackDirs) {
-                const potentialAttackerPos = { r: square.r + dir.dr, c: square.c + dir.dc };
-                const potentialJumpFromPos = { r: square.r - dir.dr, c: square.c - dir.dc };
-
-                const pieceToJumpOver = getPieceAt(potentialAttackerPos.r, potentialAttackerPos.c);
-                const jumpingPiece = getPieceAt(potentialJumpFromPos.r, potentialJumpFromPos.c);
-
-                if (jumpingPiece && jumpingPiece.owner === opponentPlayerId && pieceToJumpOver && pieceToJumpOver.owner !== opponentPlayerId && !isOutOfBounds(square.r, square.c) && !getPieceAt(square.r, square.c)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function botTurnHard() {
-            const myPieces = gameState.pieces.filter(p => p.owner === 'p2');
-            const opponentCrownSpace = gameState.crownSpaces.p1;
-            let scoredActions = [];
-
-            myPieces.forEach(piece => {
-                const {r, c} = piece.position;
-                const isCrowned = piece.isCrowned;
-
-                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                moves.forEach(m => {
-                    if (isCrowned && m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) return;
-                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace('p2', m.r, m.c)) {
-                        let score = 0;
-                        if (m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col) {
-                            score = 1000;
-                        } else {
-                            score = (m.r - r) * 15;
-                            score += (4 - m.r);
-                        }
-                       
-                        if (isSquareThreatenedBy(m, 'p1')) {
-                            score -= 500;
-                        }
-                        scoredActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c, score });
-                    }
-                });
-
-                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
-                for (const dir of attackDirs) {
-                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
-                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
-                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                   
-                    if(targetPiece && targetPiece.owner === 'p1' && !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace('p2', landingPos.r, landingPos.c)){
-                        let score = 75;
-                        if (targetPiece.isCrowned) score += 50;
-                        score += targetPiece.position.r * 5;
-                        if (isSquareThreatenedBy(landingPos, 'p1')) score -= 500;
-                        scoredActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos, score });
-                    }
-                }
-
-                 if (isCrowned) {
-                    for (const dir1 of attackDirs) {
-                        const opponent1Pos = { r: r + dir1.dr, c: c + dir1.dc };
-                        const landing1Pos = { r: r + dir1.dr * 2, c: c + dir1.dc * 2 };
-                        const opponent1 = getPieceAt(opponent1Pos.r, opponent1Pos.c);
-                        if (opponent1 && opponent1.owner === 'p1' && !isOutOfBounds(landing1Pos.r, landing1Pos.c) && !getPieceAt(landing1Pos.r, landing1Pos.c) && !isOwnCrownSpace('p2', landing1Pos.r, landing1Pos.c)) {
-                            for (const dir2 of attackDirs) {
-                                const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: landing1Pos.c + dir2.dc };
-                                const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: landing1Pos.c + dir2.dc * 2 };
-                                const opponent2 = getPieceAt(opponent2Pos.r, opponent2Pos.c);
-                                if (opponent2 && opponent2.owner === 'p1' && opponent2.id !== opponent1.id && !isOutOfBounds(landing2Pos.r, landing2Pos.c) && !getPieceAt(landing2Pos.r, landing2Pos.c) && !isOwnCrownSpace('p2', landing2Pos.r, landing2Pos.c)) {
-                                    let score = 1;
-                                     if (isSquareThreatenedBy(landing1Pos, 'p1') || isSquareThreatenedBy(landing2Pos, 'p1')) score -= 500;
-                                    scoredActions.push({ type: 'double-stack', pieceId: piece.id, path: { opponent1: opponent1Pos, landing1: landing1Pos, opponent2: opponent2Pos }, landingPos: landing2Pos, score });
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            if (scoredActions.length > 0) {
-                scoredActions.sort((a,b) => b.score - a.score);
-                const bestAction = scoredActions[0];
 
                 if (bestAction.type === 'move') {
                     executeMove(bestAction.pieceId, bestAction.r, bestAction.c);
@@ -1398,10 +1425,258 @@
                     gameState.pendingDoubleStackAttack = { pieceId: bestAction.pieceId, path: bestAction.path, landingPos: bestAction.landingPos };
                     startAttack();
                 }
-            } else {
-                gameState.message = "Bot has no valid moves.";
-                setTimeout(endTurn, 1500);
+            }, 100);
+        }
+
+        function findBestMove(gState, depth) {
+            let bestScore = -Infinity;
+            let bestActions = [];
+            const possibleActions = getAllPossibleActions('p2', gState);
+
+            for (const action of possibleActions) {
+                const newState = applyActionToState(action, 'p2', gState);
+                const score = minimax(newState, depth - 1, -Infinity, Infinity, false); // false because it's now player's turn
+               
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestActions = [action];
+                } else if (score === bestScore) {
+                    bestActions.push(action);
+                }
             }
+
+            // Choose randomly among the best actions to add variability
+            return bestActions[Math.floor(Math.random() * bestActions.length)];
+        }
+
+        function minimax(gState, depth, alpha, beta, isMaximizingPlayer) {
+            const winInfo = checkForWin(gState);
+            if (depth === 0 || winInfo) {
+                return evaluateBoardState(gState, 'p2');
+            }
+
+            if (isMaximizingPlayer) { // Bot's turn
+                let maxEval = -Infinity;
+                const actions = getAllPossibleActions('p2', gState);
+                for (const action of actions) {
+                    const childState = applyActionToState(action, 'p2', gState);
+                    const evaluation = minimax(childState, depth - 1, alpha, beta, false);
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) {
+                        break; // Prune
+                    }
+                }
+                return maxEval;
+            } else { // Player's turn
+                let minEval = Infinity;
+                const actions = getAllPossibleActions('p1', gState);
+                for (const action of actions) {
+                    const childState = applyActionToState(action, 'p1', gState);
+                    const evaluation = minimax(childState, depth - 1, alpha, beta, true);
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) {
+                        break; // Prune
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        // --- AI HELPER FUNCTIONS ---
+
+        function findNextAvailableSpot(row, startCol, direction, gState = gameState) {
+            let c = startCol;
+            while (!isOutOfBounds(row, c, gState)) {
+                if (getPieceAt(row, c, gState) === null) {
+                    return { r: row, c: c };
+                }
+                c += direction;
+            }
+            return null;
+        }
+       
+        function getAllPossibleActions(playerId, gState) {
+            const allActions = [];
+            const myPieces = gState.pieces.filter(p => p.owner === playerId);
+            const opponentId = (playerId === 'p1') ? 'p2' : 'p1';
+            const opponentCrownSpace = gState.crownSpaces[opponentId];
+            const ownCrownSpace = gState.crownSpaces[playerId];
+
+            for (const piece of myPieces) {
+                const {r, c} = piece.position;
+
+                const moves = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
+                for (const m of moves) {
+                    const isOpponentCrown = (m.r === opponentCrownSpace.row && m.c === opponentCrownSpace.col);
+                    if (piece.isCrowned && isOpponentCrown) continue;
+                    if (!isOutOfBounds(m.r, m.c, gState) && !getPieceAt(m.r, m.c, gState) && !(m.r === ownCrownSpace.row && m.c === ownCrownSpace.col)) {
+                        allActions.push({ type: 'move', pieceId: piece.id, r: m.r, c: m.c });
+                    }
+                }
+
+                const attackDirs = [ {dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1} ];
+                for (const dir of attackDirs) {
+                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
+                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
+                    const targetPiece = getPieceAt(targetPos.r, targetPos.c, gState);
+                    if(targetPiece && targetPiece.owner === opponentId && !isOutOfBounds(landingPos.r, landingPos.c, gState) && !getPieceAt(landingPos.r, landingPos.c, gState) && !(landingPos.r === ownCrownSpace.row && landingPos.c === ownCrownSpace.col)){
+                        allActions.push({ type: 'attack', pieceId: piece.id, targetPos, landingPos });
+                    }
+                }
+
+                if (piece.isCrowned) {
+                     for (const dir1 of attackDirs) {
+                        const op1Pos = { r: r + dir1.dr, c: c + dir1.dc };
+                        const l1Pos = { r: r + dir1.dr * 2, c: c + dir1.dc * 2 };
+                        const op1 = getPieceAt(op1Pos.r, op1Pos.c, gState);
+                        if (op1?.owner === opponentId && !isOutOfBounds(l1Pos.r, l1Pos.c, gState) && !getPieceAt(l1Pos.r, l1Pos.c, gState) && !(l1Pos.r === ownCrownSpace.row && l1Pos.c === ownCrownSpace.col)) {
+                            for (const dir2 of attackDirs) {
+                                const op2Pos = { r: l1Pos.r + dir2.dr, c: l1Pos.c + dir2.dc };
+                                const l2Pos = { r: l1Pos.r + dir2.dr * 2, c: l1Pos.c + dir2.dc * 2 };
+                                const op2 = getPieceAt(op2Pos.r, op2Pos.c, gState);
+                                if (op2?.owner === opponentId && op1.id !== op2.id && !isOutOfBounds(l2Pos.r, l2Pos.c, gState) && !getPieceAt(l2Pos.r, l2Pos.c, gState) && !(l2Pos.r === ownCrownSpace.row && l2Pos.c === ownCrownSpace.col)) {
+                                    allActions.push({ type: 'double-stack', pieceId: piece.id, path: { opponent1: op1Pos, landing1: l1Pos, opponent2: op2Pos }, landingPos: l2Pos });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return allActions;
+        }
+
+        function evaluateBoardState(gState, playerId) {
+            const winInfo = checkForWin(gState);
+            if(winInfo) {
+                if(winInfo.winner === playerId) return Infinity;
+                if(winInfo.winner !== playerId) return -Infinity;
+            }
+           
+            const opponentId = playerId === 'p1' ? 'p2' : 'p1';
+            const myPieces = gState.pieces.filter(p => p.owner === playerId);
+            const oppPieces = gState.pieces.filter(p => p.owner === opponentId);
+            const myCrownedCount = myPieces.filter(p => p.isCrowned).length;
+            const oppCrownedCount = oppPieces.filter(p => p.isCrowned).length;
+
+            let score = 0;
+            const PIECE_VALUE = 100;
+            const CROWNED_PIECE_VALUE = 300; // Increased value
+            const POSITIONAL_VALUE_PER_ROW = 10; // Increased value
+            const THREAT_VALUE = 35; // Increased value
+            const SAFE_PIECE_BONUS = 5;
+
+            score += myPieces.length * PIECE_VALUE;
+            score -= oppPieces.length * PIECE_VALUE;
+            score += myCrownedCount * CROWNED_PIECE_VALUE;
+            score -= oppCrownedCount * CROWNED_PIECE_VALUE;
+           
+            for(const piece of myPieces) {
+                const forwardProgress = (playerId === 'p1') ? (gState.boardSize.rows - 1 - piece.position.r) : piece.position.r;
+                score += forwardProgress * POSITIONAL_VALUE_PER_ROW;
+                if (!isSquareThreatenedBy(piece.position, opponentId, gState)) {
+                    score += SAFE_PIECE_BONUS;
+                }
+            }
+            for(const piece of oppPieces) {
+                const forwardProgress = (opponentId === 'p1') ? (gState.boardSize.rows - 1 - piece.position.r) : piece.position.r;
+                score -= forwardProgress * POSITIONAL_VALUE_PER_ROW;
+            }
+
+            score += getAllPossibleActions(playerId, gState).filter(a => a.type.includes('attack')).length * THREAT_VALUE;
+            score -= getAllPossibleActions(opponentId, gState).filter(a => a.type.includes('attack')).length * (THREAT_VALUE + 5); // Being defensive is slightly more important
+
+            return score;
+        }
+
+        function isSquareThreatenedBy(square, opponentPlayerId, gState) {
+            const attackDirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+            const myPlayerId = opponentPlayerId === 'p1' ? 'p2' : 'p1';
+
+            for (const dir of attackDirs) {
+                const jumpOverPos = { r: square.r - dir.dr, c: square.c - dir.dc };
+                const jumpFromPos = { r: square.r - dir.dr * 2, c: square.c - dir.dc * 2};
+
+                const jumpingPiece = getPieceAt(jumpFromPos.r, jumpFromPos.c, gState);
+                const pieceToJumpOver = getPieceAt(jumpOverPos.r, jumpOverPos.c, gState);
+               
+                if (jumpingPiece && jumpingPiece.owner === opponentPlayerId && pieceToJumpOver && pieceToJumpOver.owner === myPlayerId) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function applyActionToState(action, playerId, gState) {
+            // Important: Use deep copy to not mutate the original state
+            const newState = JSON.parse(JSON.stringify(gState));
+            newState.turn = playerId; // Ensure turn is set for evaluation
+           
+            const piece = getPiece(action.pieceId, newState);
+            const oldPos = piece.position;
+
+            const movePieceInState = (p, r, c) => {
+                const old = p.position;
+                if(old && newState.board[old.r][old.c] === p.id) newState.board[old.r][old.c] = null;
+                newState.board[r][c] = p.id;
+                p.position = { r, c };
+            };
+
+            if (action.type === 'move') {
+                movePieceInState(piece, action.r, action.c);
+            } else if (action.type === 'attack') {
+                const targetPiece = getPieceAt(action.targetPos.r, action.targetPos.c, newState);
+                if (targetPiece.isCrowned) {
+                    targetPiece.isCrowned = false;
+                } else {
+                    newState.board[action.targetPos.r][action.targetPos.c] = null;
+                    newState.pieces = newState.pieces.filter(p => p.id !== targetPiece.id);
+                    newState.players[playerId].capturedOpponentPieces++;
+                }
+                movePieceInState(piece, action.landingPos.r, action.landingPos.c);
+            } else if (action.type === 'double-stack') {
+                // Stage 1
+                const defender1 = getPieceAt(action.path.opponent1.r, action.path.opponent1.c, newState);
+                if (defender1.isCrowned) {
+                    defender1.isCrowned = false;
+                } else {
+                    newState.board[action.path.opponent1.r][action.path.opponent1.c] = null;
+                    newState.pieces = newState.pieces.filter(p => p.id !== defender1.id);
+                    newState.players[playerId].capturedOpponentPieces++;
+                }
+                movePieceInState(piece, action.path.landing1.r, action.path.landing1.c);
+
+                // Stage 2
+                const defender2 = getPieceAt(action.path.opponent2.r, action.path.opponent2.c, newState);
+                if (defender2.isCrowned) {
+                    defender2.isCrowned = false;
+                } else {
+                    newState.board[action.path.opponent2.r][action.path.opponent2.c] = null;
+                    newState.pieces = newState.pieces.filter(p => p.id !== defender2.id);
+                    newState.players[playerId].capturedOpponentPieces++;
+                }
+               
+                // Disassemble
+                piece.isCrowned = false; // The original piece is now at landing1
+                const newId = Math.max(0, ...newState.pieces.map(p => p.id)) + 1;
+                const newPiece = { id: newId, owner: playerId, isCrowned: false, position: null };
+                newState.pieces.push(newPiece);
+                movePieceInState(newPiece, action.landingPos.r, action.landingPos.c); // New piece goes to landing2
+            } else if (action.type === 'crown') {
+                piece.isCrowned = true;
+                newState.players[playerId].piecesInReserve--;
+            } else if (action.type === 'reinforce') {
+                const { newPiecePos, relocatedPiecePos } = action.placementData;
+                const newId = Math.max(0, ...newState.pieces.map(p => p.id)) + 1;
+                const newPiece = { id: newId, owner: playerId, isCrowned: false, position: null };
+                newState.pieces.push(newPiece);
+                movePieceInState(newPiece, newPiecePos.r, newPiecePos.c);
+                newState.players[playerId].piecesInReserve--;
+                movePieceInState(piece, relocatedPiecePos.r, relocatedPiecePos.c);
+            }
+            newState.turn = playerId === 'p1' ? 'p2' : 'p1';
+            return newState;
         }
 
         function showDiceRoll(title) {
@@ -1453,40 +1728,27 @@
             } else {
                 const piece = getPiece(gameState.selectedPieceId);
                 const { r, c } = piece.position;
-                const opponentId = 'p2';
-                let possibleActions = [];
-
-                const attackOffsets = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
-                for (const dir of attackOffsets) {
-                    const targetPos = {r: r + dir.dr, c: c + dir.dc};
-                    const targetPiece = getPieceAt(targetPos.r, targetPos.c);
-                    const landingPos = {r: r + dir.dr * 2, c: c + dir.dc * 2};
-                    let isValidLanding = !isOutOfBounds(landingPos.r, landingPos.c) && !getPieceAt(landingPos.r, landingPos.c) && !isOwnCrownSpace(piece.owner, landingPos.r, landingPos.c);
-                    if(targetPiece && targetPiece.owner === opponentId && isValidLanding){
-                       possibleActions.push({ text: `Attack piece at ${formatCoords(targetPos.r, targetPos.c)}`, score: 3 });
-                    }
-                }
-
-                const moveOffsets = [{r: r+1, c}, {r: r-1, c}, {r: r, c: c+1}, {r: r, c: c-1}];
-                moveOffsets.forEach(m => {
-                    if (!isOutOfBounds(m.r, m.c) && !getPieceAt(m.r, m.c) && !isOwnCrownSpace(piece.owner, m.r, m.c)) {
-                        let score = 1;
-                        if (m.r < r) score = 2;
-                        possibleActions.push({ text: `Move to ${formatCoords(m.r, m.c)}`, score: score });
-                    }
-                });
+                const possibleActions = getAllPossibleActions('p1', gameState).filter(a => a.pieceId === piece.id);
 
                 if (possibleActions.length === 0) {
                      addMessageToChat(`The selected piece at ${formatCoords(r, c)} has no available moves or attacks.`, 'ai');
                 } else {
-                    possibleActions.sort((a, b) => b.score - a.score);
                     let response = `For your piece at ${formatCoords(r, c)}, here are your options:<ul>`;
+                   
                     possibleActions.forEach((action) => {
-                        let prefix = "";
-                        if (action.score >= 3) prefix = "<b>Top Priority:</b> ";
-                        else if (action.score >= 2) prefix = "<b>Good Move:</b> ";
-                        else prefix = "Safe Move: ";
-                        response += `<li>${prefix}${action.text}</li>`;
+                        let text = '';
+                        let priority = 'Safe Move';
+                        if(action.type === 'move') {
+                            text = `Move to ${formatCoords(action.r, action.c)}`;
+                            if(action.r < r) priority = '<b>Good Move:</b> ';
+                        } else if (action.type === 'attack') {
+                            text = `Attack piece at ${formatCoords(action.targetPos.r, action.targetPos.c)}`;
+                            priority = '<b>Top Priority:</b> ';
+                        } else if (action.type === 'double-stack') {
+                            text = `Double-Stack Attack starting with jump over ${formatCoords(action.path.opponent1.r, action.path.opponent1.c)}`;
+                             priority = '<b>!!! Top Priority:</b> ';
+                        }
+                        response += `<li>${priority}${text}</li>`;
                     });
                     response += "</ul>";
                     addMessageToChat(response, 'ai');
