@@ -38,6 +38,13 @@
         .captured-icon { width: 25px; height: 25px; border-radius: 50%; border: 2px solid black; }
         #game-center { position: relative; display: flex; flex-direction: column; align-items: center; }
 
+        #win-loss-record {
+            margin: -10px 0 10px;
+            color: #ccc;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
         #board-container {
             display: grid;
             grid-template-columns: var(--label-size) 1fr;
@@ -162,8 +169,8 @@
         #dice-svg .face { fill: #f1faee; stroke: #1d3557; stroke-width: 5; }
         #dice-svg .text { font-size: 50px; font-weight: bold; fill: #e63946; text-anchor: middle; dominant-baseline: central; }
         #dice-results { font-size: 1.2em; min-height: 1.5em; }
-        #crownChoiceContent h3 { font-size: 1.8em; margin-top: 0; color: #fff; }
-        #crownChoiceActions button { margin: 10px; }
+        #crownChoiceContent h3, #reinforceChoiceContent h3 { font-size: 1.8em; margin-top: 0; color: #fff; }
+        #crownChoiceActions button, #reinforceChoiceActions button { margin: 10px; }
 
         @keyframes roll-animation {
             0% { transform: scale(0.5) rotate(0deg); }
@@ -183,10 +190,10 @@
         #help-button { bottom: 20px; right: 20px; background-color: #457b9d; }
         #help-button:hover { transform: scale(1.1); background-color: #a8dadc; color: #1d3557; }
         
-        #ai-button { bottom: 20px; right: 100px; background-color: #e63946; }
+        #ai-button { bottom: 90px; right: 20px; background-color: #e63946; }
         #ai-button:hover { transform: scale(1.1); background-color: #f1faee; color: #e63946;}
         
-        #audio-toggle-button { bottom: 20px; right: 180px; background-color: #2a9d8f; }
+        #audio-toggle-button { bottom: 160px; right: 20px; background-color: #2a9d8f; }
         #audio-toggle-button:hover { transform: scale(1.1); background-color: #e9c46a; color: #264653; }
 
         #ai-chat-display {
@@ -250,8 +257,8 @@
 
             .floating-button { width: 50px; height: 50px; font-size: 24px; }
              #help-button { right: 15px; bottom: 15px; }
-             #ai-button { right: 80px; bottom: 15px; }
-             #audio-toggle-button { right: 145px; bottom: 15px; }
+             #ai-button { right: 15px; bottom: 75px; }
+             #audio-toggle-button { right: 15px; bottom: 135px; }
         }
     </style>
 </head>
@@ -267,6 +274,7 @@
         </div>
         <div id="game-center">
             <h1>Crownfall</h1>
+            <p id="win-loss-record"></p>
             <div id="thinking-indicator" class="thinking-indicator">⏳</div>
             <div id="board-container">
                 <div id="col-headers"></div>
@@ -295,6 +303,7 @@
     <div id="dice-modal" class="modal"><div id="dice-modal-content" class="modal-content"><h3 id="dice-title">Rolling...</h3><div id="dice-container"><svg id="dice-svg" viewBox="0 0 100 100"><polygon class="face" points="50,1 95,25 95,75 50,99 5,75 5,25" /><text class="text" x="50" y="52">20</text></svg></div><div id="dice-results"></div></div></div>
     <div id="victoryModal" class="modal"><div id="victoryContent" class="modal-content"><div id="fireworks-container"></div><div id="loserAnimation" style="display: none;"><div class="loser-icon"></div></div><h2 id="victoryTitle"></h2><p id="victoryMessage"></p><div id="victoryActions"></div></div></div>
     <div id="crownChoiceModal" class="modal"><div id="crownChoiceContent" class="modal-content"><h3>You've Reached the Crown Space!</h3><p>You may Double-Stack this piece or place a Reinforcement from your reserve.</p><p>Reserve: <b id="crown-modal-reserve-count">X</b></p><div id="crownChoiceActions"></div></div></div>
+    <div id="reinforceChoiceModal" class="modal"><div id="reinforceChoiceContent" class="modal-content"><h3>Choose Reinforcement Location</h3><p>Choose which side of your crown to place the new piece. The original piece will move to the opposite side of your starting row.</p><div id="reinforceChoiceActions"></div></div></div>
     <div id="quitConfirmModal" class="modal"><div class="modal-content"><h3>Quit Game?</h3><p>Are you sure you want to forfeit? This will count as a loss.</p><div id="quitConfirmActions"><button id="quitConfirmYes">Yes, I Quit</button><button id="quitConfirmNo">No, Keep Playing</button></div></div></div>
 
     <!-- Floating Buttons and their Modals -->
@@ -334,10 +343,10 @@
             <li>When a regular piece reaches the opponent's crown space, you get a choice (if you have reserve pieces):
                 <ol>
                     <li><b>Double-Stack:</b> Take a piece from your reserve and place it on top, creating a "Crowned" piece. This uses one reserve piece.</li>
-                    <li><b>Reinforce:</b> This is a two-part move where the game automatically determines placement.
+                    <li><b>Reinforce:</b> This is a two-part move.
                         <ol style="margin-top: 5px;">
-                            <li>First, a new piece from your reserve is placed on an empty space next to your <b>OWN</b> crown space.</li>
-                            <li>Second, the piece that just reached the opponent's crown space is immediately moved back to an empty space on your starting row, on the opposite side of the crown from where the new piece was placed.</li>
+                            <li>First, you place a new piece from your reserve onto an empty space to the left or right of your <b>OWN</b> crown space.</li>
+                            <li>Second, the piece that just reached the opponent's crown space is immediately moved back to your starting row. It is placed on the opposite side of your crown from where you placed the new piece.</li>
                             <li><b>Bumping:</b> If a target space for either piece is occupied, it will be placed in the next available empty space on that row, moving outwards from the crown.</li>
                             <li>This option is only available if there are valid empty spots for <b>both</b> the new piece and the relocated original piece.</li>
                         </ol>
@@ -364,7 +373,7 @@
         <ul>
             <li>Can only be performed by a <b>crowned</b> piece.</li>
             <li>This attack allows a crowned piece to jump over <b>two</b> separate opponent pieces in a sequence. You must declare the attack before rolling.</li>
-            <li>The attack consists of two separate jumps. The dice roll for <b>each jump</b> is determined by its target:
+            <li>The dice roll for <b>each jump</b> is determined by its target:
                 <ul>
                     <li>Jumping a single piece: Attacker rolls <b>1d20</b>. A successful roll (matching your Even/Odd type) captures the piece.</li>
                     <li>Jumping a crowned piece: This is a "Best of 7" contest (<b>7d20</b>). 4+ successes are needed to **un-crown** the defending piece, which remains on the board.</li>
@@ -401,20 +410,28 @@
     <div id="audio-toggle-button" class="floating-button">🔊</div>
 
     <script>
-        /**
-         * =================================================================
-         * PROCEDURAL AUDIO ENGINE (WEB AUDIO API)
-         * =================================================================
-         */
+        // === MODIFIED: AUDIO ENGINE TO HANDLE EXTERNAL FILES AND PROCEDURAL SOUNDS ===
         const audioManager = {
             ctx: null,
             masterGain: null,
             isMuted: false,
             isInitialized: false,
-            thinkingSource: null,
-            victoryMusicSource: null,
-            defeatMusicSource: null,
-            masterVolume: 0.6, // Adjusted master volume
+            audioLoaded: false,
+            masterVolume: 0.8,
+            audioBuffers: {},
+            loopingSources: {},
+
+            // === NEW: URLs for your sound files on GitHub ===
+            soundUrls: {
+                doubleStackJump: 'https://nerdrealm419.github.io//CrownFallv3.0/90s-game-ui-10-185103.mp3',
+                botAttackSuccess: 'https://nerdrealm419.github.io/CrownFallv3.0/game-fx-9-40197.mp3',
+                playerAttackSuccess: 'https://nerdrealm419.github.io/CrownFallv3.0/achievement-video-game-type-1-230515.mp3',
+                winnerMusic: 'https://nerdrealm419.github.io/CrownFallv3.0/game-music-loop-6-144641.mp3',
+                crownPiece: 'https://nerdrealm419.github.io/CrownFallv3.0/game-over-classic-206486.mp3',
+                uncrownSuccess: 'https://nerdrealm419.github.io/CrownFallv3.0/game-bonus-144751.mp3',
+                loserVoice: 'https://nerdrealm419.github.io/CrownFallv3.0/game-over-deep-male-voice-clip-352695.mp3',
+                diceLoop: 'https://nerdrealm419.github.io/CrownFallv3.0/dice22-81801.mp3',
+            },
 
             init() {
                 if (this.isInitialized) return;
@@ -430,62 +447,88 @@
                 }
             },
 
-            play(soundName, options = {}) {
+            // === NEW: Function to load all external audio files ===
+            async loadAudio() {
+                if (this.audioLoaded || !this.isInitialized) return;
+                console.log("Loading audio assets...");
+                const promises = Object.entries(this.soundUrls).map(async ([name, url]) => {
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const arrayBuffer = await response.arrayBuffer();
+                        const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+                        this.audioBuffers[name] = audioBuffer;
+                        // console.log(`Loaded: ${name}`);
+                    } catch (e) {
+                        console.error(`Failed to load or decode audio for ${name}:`, e);
+                    }
+                });
+                await Promise.all(promises);
+                this.audioLoaded = true;
+                console.log("All audio assets loaded.");
+            },
+
+            // === MODIFIED: Main play function to handle buffers and procedural sounds ===
+            play(soundName, loop = false) {
                 this.init();
                 if (!this.isInitialized || this.isMuted) return;
 
-                // Handle looping sounds
-                if (soundName === 'thinking') {
-                    this.stop('thinking');
-                    this.thinkingSource = this.sounds.thinking(this.ctx, this.masterGain);
-                    return;
-                }
-                if (soundName === 'music_victory') {
-                    this.stopAllMusic();
-                    this.victoryMusicSource = this.sounds.music_victory(this.ctx, this.masterGain);
-                    return;
-                }
-                if (soundName === 'music_defeat') {
-                    this.stopAllMusic();
-                    this.defeatMusicSource = this.sounds.music_defeat(this.ctx, this.masterGain);
+                if (loop) { this.stop(soundName); }
+
+                // Play from loaded audio buffer if available
+                if (this.audioBuffers[soundName]) {
+                    const source = this.ctx.createBufferSource();
+                    source.buffer = this.audioBuffers[soundName];
+                    source.connect(this.masterGain);
+                    source.loop = loop;
+                    source.start(this.ctx.currentTime);
+                    if (loop) {
+                        this.loopingSources[soundName] = source;
+                    }
                     return;
                 }
 
+                // Fallback to procedural sounds
+                if (soundName === 'thinking') {
+                    this.stop('thinking');
+                    this.loopingSources['thinking'] = this.sounds.thinking(this.ctx, this.masterGain);
+                    return;
+                }
                 const soundGenerator = this.sounds[soundName];
                 if (soundGenerator) {
-                    soundGenerator(this.ctx, this.masterGain, options);
+                    soundGenerator(this.ctx, this.masterGain);
                 }
             },
             
-            stopAllMusic() {
-                this.stop('music_victory');
-                this.stop('music_defeat');
-            },
-
+            // === MODIFIED: Stop function to handle new looping sources ===
             stop(soundName) {
                 if (!this.isInitialized) return;
-                if (soundName === 'thinking' && this.thinkingSource) {
-                    this.thinkingSource.stop(); this.thinkingSource = null;
+                if (this.loopingSources[soundName]) {
+                    try {
+                        this.loopingSources[soundName].stop();
+                    } catch (e) {
+                        // Ignore errors from stopping a source that already finished
+                    }
+                    delete this.loopingSources[soundName];
                 }
-                if (soundName === 'music_victory' && this.victoryMusicSource) {
-                    this.victoryMusicSource.stop(); this.victoryMusicSource = null;
-                }
-                if (soundName === 'music_defeat' && this.defeatMusicSource) {
-                    this.defeatMusicSource.stop(); this.defeatMusicSource = null;
+            },
+
+            stopAllLoops() {
+                if (!this.isInitialized) return;
+                for (const soundName in this.loopingSources) {
+                    this.stop(soundName);
                 }
             },
 
             toggleMute() {
                 this.isMuted = !this.isMuted;
-                const toggleButton = getEl('audio-toggle-button');
-                toggleButton.textContent = this.isMuted ? '🔇' : '🔊';
+                getEl('audio-toggle-button').textContent = this.isMuted ? '🔇' : '🔊';
 
                 if (this.isInitialized) {
                     if (this.isMuted) {
                         this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
                         this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
-                        this.stop('thinking');
-                        this.stopAllMusic();
+                        this.stopAllLoops(); // Stop any looping sounds
                     } else {
                         this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
                         this.play('click');
@@ -494,165 +537,12 @@
             },
 
             sounds: {
-                start: (ctx, dest) => {
-                    const osc = ctx.createOscillator(); const g = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(300, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
-                    g.gain.setValueAtTime(0.6, ctx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-                    osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.3);
-                },
-                move: (ctx, dest) => { // White noise scratch
-                    const bufferSize = ctx.sampleRate * 0.1; const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate); const output = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
-                    const noise = ctx.createBufferSource(); noise.buffer = buffer;
-                    const bandpass = ctx.createBiquadFilter(); bandpass.type = 'bandpass'; bandpass.frequency.value = 1500; bandpass.Q.value = 1;
-                    const g = ctx.createGain(); g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-                    noise.connect(bandpass); bandpass.connect(g); g.connect(dest);
-                    noise.start(); noise.stop(ctx.currentTime + 0.1);
-                },
-                attack_player: (ctx, dest) => { // Kachow sound
-                    const osc = ctx.createOscillator(); const g = ctx.createGain();
-                    osc.type = 'sawtooth';
-                    g.gain.setValueAtTime(0.4, ctx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-                    osc.frequency.setValueCurveAtTime([800, 2000, 400], ctx.currentTime, 0.15);
-                    osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.2);
-                },
-                attack_bot: (ctx, dest) => { // Wahwah sound
-                    const osc = ctx.createOscillator(); osc.type = 'sawtooth';
-                    const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.Q.value = 5;
-                    const g = ctx.createGain(); g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-                    osc.frequency.value = 220;
-                    filter.frequency.setValueAtTime(400, ctx.currentTime);
-                    filter.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.2);
-                    filter.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.4);
-                    osc.connect(filter); filter.connect(g); g.connect(dest);
-                    osc.start(); osc.stop(ctx.currentTime + 0.5);
-                },
-                attack_uncrown: (ctx, dest) => { // Dun-dun-dunnn
-                    const notes = [146.83, 138.59, 130.81]; // D3, C#3, C3
-                    notes.forEach((freq, i) => {
-                        const osc = ctx.createOscillator(); const g = ctx.createGain();
-                        osc.type = 'sawtooth';
-                        osc.frequency.value = freq;
-                        g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.25);
-                        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.25 + 0.5);
-                        osc.connect(g); g.connect(dest);
-                        osc.start(ctx.currentTime + i * 0.25);
-                        osc.stop(ctx.currentTime + i * 0.25 + (i === 2 ? 0.8 : 0.2));
-                    });
-                },
-                attack_crown_vs_crown: (ctx, dest) => { // Ka-ching
-                    const t = ctx.currentTime;
-                    // Bell sound
-                    [2093, 2793].forEach(freq => {
-                        const osc = ctx.createOscillator(); const g = ctx.createGain();
-                        osc.type = 'sine'; osc.frequency.value = freq;
-                        g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-                        osc.connect(g); g.connect(dest); osc.start(t); osc.stop(t + 0.8);
-                    });
-                    // Cha-ching noise
-                    const bufferSize = ctx.sampleRate * 0.3; const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate); const output = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
-                    const noise = ctx.createBufferSource(); noise.buffer = buffer;
-                    const filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 3000;
-                    const g = ctx.createGain(); g.gain.setValueAtTime(0.3, t + 0.1); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-                    noise.connect(filter); filter.connect(g); g.connect(dest);
-                    noise.start(t + 0.1); noise.stop(t + 0.4);
-                },
-                attack_double_stack_success: (ctx, dest) => { // Plop-plop
-                    const freqs = [150, 180, 160, 190];
-                    freqs.forEach((freq, i) => {
-                        const osc = ctx.createOscillator(); const g = ctx.createGain();
-                        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-                        osc.frequency.exponentialRampToValueAtTime(freq * 0.8, ctx.currentTime + i * 0.1 + 0.1);
-                        g.gain.setValueAtTime(0.5, ctx.currentTime + i * 0.1);
-                        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.15);
-                        osc.connect(g); g.connect(dest); osc.start(ctx.currentTime + i * 0.1); osc.stop(ctx.currentTime + i * 0.1 + 0.15);
-                    });
-                },
-                dice_tick: (ctx, dest) => {
-                    const osc = ctx.createOscillator(); const g = ctx.createGain();
-                    osc.type = 'triangle'; osc.frequency.value = 2000;
-                    g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-                    osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.05);
-                },
-                thinking: (ctx, dest) => {
-                    const source = ctx.createBufferSource(); const bufferSize = ctx.sampleRate * 0.5; const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const data = buffer.getChannelData(0); const tick = Math.floor(bufferSize * 0.1);
-                    for (let i = 0; i < 200; i++) { data[tick + i] = 0.3 * (1 - i / 200); }
-                    source.buffer = buffer; source.loop = true; source.connect(dest); source.start(ctx.currentTime);
-                    return source;
-                },
-                crown: (ctx, dest) => { // Magical chime
-                    const baseFreqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-                    baseFreqs.forEach((baseFreq, i) => {
-                        const freqs = [baseFreq, baseFreq * 1.005]; // Detuned pair for shimmer
-                        freqs.forEach(freq => {
-                            const osc = ctx.createOscillator(); const g = ctx.createGain();
-                            osc.type = 'sine'; osc.frequency.value = freq;
-                            g.gain.setValueAtTime(0, ctx.currentTime);
-                            g.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.1 + i * 0.05);
-                            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3);
-                            osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 3.1);
-                        });
-                    });
-                },
-                reinforce: (ctx, dest) => { // Huthuthut
-                    for(let i = 0; i < 3; i++) {
-                        const t = ctx.currentTime + i * 0.15;
-                        const osc = ctx.createOscillator(); const g = ctx.createGain();
-                        osc.type = 'square'; osc.frequency.value = 100;
-                        g.gain.setValueAtTime(0.2, t);
-                        g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-                        osc.connect(g); g.connect(dest); osc.start(t); osc.stop(t + 0.1);
-                    }
-                },
-                music_victory: (ctx, dest) => {
-                    const loopLength = 2; // 2 seconds for a full loop
-                    const source = ctx.createBufferSource();
-                    const buffer = ctx.createBuffer(2, ctx.sampleRate * loopLength, ctx.sampleRate);
-                    const ch0 = buffer.getChannelData(0); const ch1 = buffer.getChannelData(1);
-
-                    const bassNotes = [130.81, 130.81, 130.81, 130.81, 164.81, 164.81, 164.81, 164.81]; // C, C, C, C, E, E, E, E
-                    for (let i = 0; i < buffer.length; i++) {
-                        const t = i / ctx.sampleRate;
-                        // Bassline
-                        const beat = Math.floor(t * 4);
-                        ch0[i] += (Math.sin(2 * Math.PI * bassNotes[beat % bassNotes.length] * t) * 0.3) * Math.exp(-t * 2);
-                        // Kick
-                        if (t % 0.5 < 0.01) ch0[i] += Math.sin(2 * Math.PI * 60 * t) * Math.exp(-t * 20) * 0.8;
-                        // Hi-hat
-                        if (t % 0.25 < 0.05) ch1[i] += (Math.random() - 0.5) * 0.2 * Math.exp(-t * 30);
-                    }
-                    source.buffer = buffer; source.loop = true; source.connect(dest); source.start();
-                    return source;
-                },
-                music_defeat: (ctx, dest) => {
-                    const loopLength = 8;
-                    const source = ctx.createBufferSource();
-                    const buffer = ctx.createBuffer(1, ctx.sampleRate * loopLength, ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    const chord = [65.41, 77.78, 98.00]; // Cmin: C, Eb, G
-                    const lpf = ctx.createBiquadFilter(); lpf.type = "lowpass"; lpf.frequency.value = 400;
-                    for(let i=0; i<buffer.length; ++i) {
-                        const t = i / ctx.sampleRate;
-                        data[i] = (Math.sin(2 * Math.PI * chord[0] * t) + 0.5 * Math.sin(2 * Math.PI * chord[1] * t) + 0.25 * Math.sin(2 * Math.PI * chord[2] * t)) * 0.15 * (0.5 + 0.5 * Math.sin(2 * Math.PI * 0.125 * t));
-                    }
-                    source.buffer = buffer; source.loop = true;
-                    const g = ctx.createGain(); g.gain.value = 0.5;
-                    source.connect(lpf); lpf.connect(g); g.connect(dest);
-                    source.start();
-                    return source;
-                },
-                click: (ctx, dest) => { // Soft click
-                    const osc = ctx.createOscillator(); const g = ctx.createGain();
-                    osc.type = 'triangle'; osc.frequency.setValueAtTime(900, ctx.currentTime);
-                    g.gain.setValueAtTime(0.2, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-                    osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.1);
-                }
+                start: (ctx, dest) => { const osc = ctx.createOscillator(); const g = ctx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2); g.gain.setValueAtTime(0.6, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.3); },
+                move: (ctx, dest) => { const osc = ctx.createOscillator(); const g = ctx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(200, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1); g.gain.setValueAtTime(0.4, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1); osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.1); },
+                fail: (ctx, dest) => { const osc = ctx.createOscillator(); const g = ctx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); g.gain.setValueAtTime(0.4, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.2); },
+                thinking: (ctx, dest) => { const source = ctx.createBufferSource(); const bufferSize = ctx.sampleRate * 0.5; const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate); const data = buffer.getChannelData(0); const tick = Math.floor(bufferSize * 0.1); for (let i = 0; i < 200; i++) { data[tick + i] = 0.3 * (1 - i / 200); } source.buffer = buffer; source.loop = true; source.connect(dest); source.start(ctx.currentTime); return source; },
+                defeat: (ctx, dest) => { const arpeggio = [392.00, 311.13, 261.63, 196.00]; arpeggio.forEach((freq, i) => { const osc = ctx.createOscillator(); const g = ctx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, ctx.currentTime); g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.2); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.2 + 0.4); osc.connect(g); g.connect(dest); osc.start(ctx.currentTime + i * 0.2); osc.stop(ctx.currentTime + i * 0.2 + 0.4); }); },
+                click: (ctx, dest) => { const osc = ctx.createOscillator(); const g = ctx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(1000, ctx.currentTime); g.gain.setValueAtTime(0.4, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1); osc.connect(g); g.connect(dest); osc.start(); osc.stop(ctx.currentTime + 0.1); }
             }
         };
 
@@ -669,8 +559,8 @@
         const actionButtonsElement = document.getElementById('action-buttons');
         const permanentActionsContainer = document.getElementById('permanent-actions');
         const setupChoicesElement = document.getElementById('setup-choices');
+        const winLossRecordElement = document.getElementById('win-loss-record');
         let gameState = {};
-        let diceTickInterval = null;
 
         const getEl = (id) => document.getElementById(id);
         const rollD20 = () => Math.floor(Math.random() * 20) + 1;
@@ -683,6 +573,30 @@
         const isOutOfBounds = (r, c, gState = gameState) => r < 0 || r >= gState.boardSize.rows || c < 0 || c >= gState.boardSize.cols;
         
         const formatCoords = (r, c) => `(${{0:'A', 1:'B', 2:'C', 3:'D', 4:'E'}[r]}, ${c + 1})`;
+        
+        // --- Win/Loss Record Functions ---
+        function getRecord() {
+            try {
+                const record = localStorage.getItem('crownfallRecord');
+                return record ? JSON.parse(record) : { wins: 0, losses: 0 };
+            } catch (e) {
+                console.error("Could not read from localStorage", e);
+                return { wins: 0, losses: 0 };
+            }
+        }
+
+        function saveRecord(record) {
+            try {
+                localStorage.setItem('crownfallRecord', JSON.stringify(record));
+            } catch (e) {
+                console.error("Could not save to localStorage", e);
+            }
+        }
+
+        function displayRecord() {
+            const record = getRecord();
+            winLossRecordElement.textContent = `Record: ${record.wins} W - ${record.losses} L`;
+        }
 
         function isOwnCrownSpace(player, r, c) {
             const ownCrown = (player === 'p1') ? gameState.crownSpaces.p1 : gameState.crownSpaces.p2;
@@ -869,13 +783,16 @@
         }
 
         function initializeGame() {
-            audioManager.stopAllMusic();
+            displayRecord();
             document.body.classList.remove('game-over');
             getEl('loserAnimation').style.display = 'none';
             getEl('loserAnimation').innerHTML = '<div class="loser-icon"></div>';
             getEl('fireworks-container').style.display = 'none';
             getEl('fireworks-container').innerHTML = '';
             
+            // === NEW: Stop any lingering looping audio from a previous game ===
+            audioManager.stopAllLoops();
+
             gameState = {
                 boardSize: { rows: 5, cols: 7 },
                 board: Array(5).fill(0).map(() => Array(7).fill(null)),
@@ -910,8 +827,10 @@
         }
        
         async function setupRollOff() {
-            // This is the first guaranteed user interaction, perfect for starting audio.
+            // === MODIFIED: This is the first guaranteed user interaction, perfect for starting and loading audio. ===
             audioManager.play('start');
+            audioManager.loadAudio(); // Start loading all audio files in the background
+
             gameState.actions = [];
             render();
             const p1Roll = await showDiceRoll("Player 1 Rolling...");
@@ -1087,7 +1006,7 @@
 
                         if (opponent1 && opponent1.owner !== piece.owner && isValidLanding1) {
                             for (const dir2 of attackDirs) {
-                                const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: c + dir2.dc };
+                                const opponent2Pos = { r: landing1Pos.r + dir2.dr, c: landing1Pos.c + dir2.dc };
                                 const landing2Pos = { r: landing1Pos.r + dir2.dr * 2, c: c + dir2.dc * 2 };
                                 const opponent2 = getPieceAt(opponent2Pos.r, opponent2Pos.c);
 
@@ -1219,7 +1138,12 @@
                 const isSuccess = (gameState.players[attacker.owner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attacker.owner].dieType === 'odd' && roll % 2 !== 0);
                
                 if(isSuccess) {
-                    audioManager.play(attacker.owner === 'p1' ? 'attack_player' : 'attack_bot');
+                    // === MODIFIED: Play success sound based on player ===
+                    if (attacker.owner === 'p1') {
+                        audioManager.play('playerAttackSuccess');
+                    } else {
+                        audioManager.play('botAttackSuccess');
+                    }
                     gameState.message = "Attack successful!";
                     gameState.players[attacker.owner].capturedOpponentPieces++;
                     gameState.board[attackData.targetPos.r][attackData.targetPos.c] = null;
@@ -1292,14 +1216,14 @@
             const defender = getPieceAt(attackData.targetPos.r, attackData.targetPos.c);
             let message = "";
             let attackSucceeded = false;
-            let soundToPlay = 'fail';
 
             if (rollsNeeded === 3) { // Single vs Crowned
                 if (successes >= 2) {
                     defender.isCrowned = false;
                     message = `Attack successful! (${successes}/3) Defender is uncrowned.`;
                     attackSucceeded = true;
-                    soundToPlay = 'attack_uncrown';
+                    // === NEW: Play special sound for un-crowning a piece ===
+                    audioManager.play('uncrownSuccess');
                 } else {
                     message = `Attack failed! (${successes}/3) Defender is safe.`;
                 }
@@ -1308,7 +1232,6 @@
                     defender.isCrowned = false;
                     message = `Crowned attack successful! (${successes} vs ${defenderSuccesses}) Defender is uncrowned.`;
                     attackSucceeded = true;
-                    soundToPlay = 'attack_crown_vs_crown';
                 } else if (defenderSuccesses >= 4) {
                     attacker.isCrowned = false;
                     message = `Crowned attack FAILED! (${successes} vs ${defenderSuccesses}) Your piece is uncrowned.`;
@@ -1317,7 +1240,11 @@
                 }
             }
 
-            audioManager.play(soundToPlay);
+            if (attackSucceeded) {
+                // Sound is played in the specific success condition now, not here.
+            } else {
+                audioManager.play('fail');
+            }
             gameState.message = message;
             setTimeout(endTurn, 2500);
         }
@@ -1349,7 +1276,7 @@
             if (numRolls === 1) {
                 const roll = await showDiceRoll(`${attacker.owner === 'p1' ? 'Player 1' : 'Bot'} attacking...`);
                 const isSuccess = (gameState.players[attacker.owner].dieType === 'even' && roll % 2 === 0) || (gameState.players[attacker.owner].dieType === 'odd' && roll % 2 !== 0);
-                resolveCurrentDoubleStackJump(isSuccess, false);
+                resolveCurrentDoubleStackJump(isSuccess);
             } else { // numRolls === 7
                 gameState.pendingMultiRoll = { 
                     attackData: { pieceId: attacker.id, targetPos: defenderPos }, 
@@ -1360,7 +1287,7 @@
                     onComplete: () => {
                         const { successes, defenderSuccesses } = gameState.pendingMultiRoll;
                         const wasSuccess = successes >= 4 && defenderSuccesses < 4;
-                        resolveCurrentDoubleStackJump(wasSuccess, true);
+                        resolveCurrentDoubleStackJump(wasSuccess);
                     } 
                 };
                 gameState.message = `Double-Stack Attack (Stage ${stage}): Crowned target! Best of 7 rolls.`;
@@ -1371,7 +1298,7 @@
             }
         }
 
-        function resolveCurrentDoubleStackJump(wasSuccess, wasVsCrown) {
+        function resolveCurrentDoubleStackJump(wasSuccess) {
             const { pieceId, path, stage } = gameState.pendingDoubleStackAttack;
             if (!wasSuccess) {
                 audioManager.play('fail');
@@ -1380,14 +1307,11 @@
                 setTimeout(endTurn, 2500);
                 return;
             }
-            
-            const attacker = getPiece(pieceId);
-            if (wasVsCrown) {
-                audioManager.play('attack_crown_vs_crown');
-            } else {
-                audioManager.play(attacker.owner === 'p1' ? 'attack_player' : 'attack_bot');
-            }
 
+            // === NEW: Play double-stack jump sound for each successful jump ===
+            audioManager.play('doubleStackJump');
+
+            const attacker = getPiece(pieceId);
             const defenderPos = (stage === 1) ? path.opponent1 : path.opponent2;
             const landingPos = (stage === 1) ? path.landing1 : path.landingPos;
             const defender = getPieceAt(defenderPos.r, defenderPos.c);
@@ -1409,7 +1333,6 @@
                 render();
                 setTimeout(executeNextDoubleStackJump, 1500);
             } else { // Stage 2 success - final resolution
-                audioManager.play('attack_double_stack_success');
                 attacker.isCrowned = false;
                 
                 const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
@@ -1435,26 +1358,54 @@
             }
         }
        
-        function getReinforcementPlacement(player, gState = gameState) {
-            const ownCrownSpace = gState.crownSpaces[player];
+        function promptReinforceChoice() {
+            getEl('crownChoiceModal').classList.remove('visible');
+            const reinforceModal = getEl('reinforceChoiceModal');
+            const actionsContainer = getEl('reinforceChoiceActions');
+            actionsContainer.innerHTML = '';
+
+            const piece = getPiece(gameState.pieceToCrownId);
+            if (!piece) { endTurn(); return; }
+            const player = piece.owner;
+            const ownCrownSpace = gameState.crownSpaces[player];
             const startRow = ownCrownSpace.row;
 
-            // Attempt 1: New piece left, original piece right
-            const newPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1, gState);
-            const relocatedPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1, gState);
-            if (newPieceSpotLeft && relocatedPieceSpotRight) {
-                return { newPiecePos: newPieceSpotLeft, relocatedPiecePos: relocatedPieceSpotRight };
-            }
+            const newPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+            const relocatedPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+            const canPlaceLeft = newPieceSpotLeft && relocatedPieceSpotRight;
 
-            // Attempt 2: New piece right, original piece left
-            const newPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1, gState);
-            const relocatedPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1, gState);
-             // Prevent placing both on the same spot if board is narrow
-            if (newPieceSpotRight && relocatedPieceSpotLeft && newPieceSpotRight.c !== relocatedPieceSpotLeft.c) {
-                return { newPiecePos: newPieceSpotRight, relocatedPiecePos: relocatedPieceSpotLeft };
+            const newPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+            const relocatedPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+            const canPlaceRight = newPieceSpotRight && relocatedPieceSpotLeft;
+            
+            if (canPlaceLeft) {
+                const leftButton = document.createElement('button');
+                leftButton.textContent = "Place Left";
+                leftButton.onclick = () => {
+                    audioManager.play('click'); 
+                    reinforceModal.classList.remove('visible'); 
+                    resolveCrowning('reinforce', { newPiecePos: newPieceSpotLeft, relocatedPiecePos: relocatedPieceSpotRight }); 
+                };
+                actionsContainer.appendChild(leftButton);
             }
-
-            return null; // No valid placement found
+            if (canPlaceRight) {
+                const rightButton = document.createElement('button');
+                rightButton.textContent = "Place Right";
+                rightButton.onclick = () => { 
+                    audioManager.play('click');
+                    reinforceModal.classList.remove('visible'); 
+                    resolveCrowning('reinforce', { newPiecePos: newPieceSpotRight, relocatedPiecePos: relocatedPieceSpotLeft }); 
+                };
+                actionsContainer.appendChild(rightButton);
+            }
+            if (!canPlaceLeft && !canPlaceRight) {
+                actionsContainer.innerHTML = "<p>No available space to place a reinforcement and relocate the original piece.</p>";
+                const okButton = document.createElement('button');
+                okButton.textContent = "OK";
+                okButton.onclick = () => { audioManager.play('click'); reinforceModal.classList.remove('visible'); endTurn(); };
+                actionsContainer.appendChild(okButton);
+            }
+            reinforceModal.classList.add('visible');
         }
 
         function enterCrowningPhase(pieceId) {
@@ -1486,11 +1437,21 @@
                 crownButton.disabled = !hasReserves;
                 actionsContainer.appendChild(crownButton);
 
-                const placementData = getReinforcementPlacement('p1');
                 const reinforceButton = document.createElement('button');
                 reinforceButton.textContent = "Place Reinforcement";
-                reinforceButton.onclick = () => { audioManager.play('click'); crownModal.classList.remove('visible'); resolveCrowning('reinforce', placementData); };
-                reinforceButton.disabled = !hasReserves || !placementData;
+                reinforceButton.onclick = () => { audioManager.play('click'); promptReinforceChoice(); };
+                
+                const ownCrownSpace = gameState.crownSpaces.p1;
+                const startRow = ownCrownSpace.row;
+                const newPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                const relocatedPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                const canPlaceLeft = newPieceSpotLeft && relocatedPieceSpotRight;
+                const newPieceSpotRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1);
+                const relocatedPieceSpotLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1);
+                const canPlaceRight = newPieceSpotRight && relocatedPieceSpotLeft;
+                const canReinforce = canPlaceLeft || canPlaceRight;
+
+                reinforceButton.disabled = !hasReserves || !canReinforce;
                 actionsContainer.appendChild(reinforceButton);
                
                 if (!hasReserves) {
@@ -1511,6 +1472,7 @@
                     let bestChoice = 'none';
                     let bestScore = -Infinity;
                     
+                    // The "do nothing" state is the baseline.
                     const baselineScore = masterEvaluateBoardState(gameState, 'p2');
                     bestScore = baselineScore;
 
@@ -1522,10 +1484,19 @@
                         bestChoice = 'crown';
                     }
                     
-                    // Evaluate reinforcing option
-                    const placementData = getReinforcementPlacement('p2', gameState);
+                    // Evaluate reinforcing options
+                    const ownCrownSpace = gameState.crownSpaces.p2;
+                    const startRow = ownCrownSpace.row;
+                    const placements = [];
+                    const pLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1, gameState);
+                    const rRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1, gameState);
+                    if(pLeft && rRight) placements.push({ newPiecePos: pLeft, relocatedPiecePos: rRight });
+                    const pRight = findNextAvailableSpot(startRow, ownCrownSpace.col + 1, 1, gameState);
+                    const rLeft = findNextAvailableSpot(startRow, ownCrownSpace.col - 1, -1, gameState);
+                    if(pRight && rLeft && !(pRight.c === pLeft?.c && rLeft.c === rRight?.c) ) placements.push({ newPiecePos: pRight, relocatedPiecePos: rLeft });
+
                     let bestReinforceData = null;
-                    if(placementData) {
+                    for (const placementData of placements) {
                         const reinforceState = applyActionToState({type: 'reinforce', pieceId: pieceId, placementData}, 'p2', gameState);
                         const reinforceScore = masterEvaluateBoardState(reinforceState, 'p2');
                         if (reinforceScore > bestScore) {
@@ -1548,12 +1519,13 @@
             const playerObj = gameState.players[player];
 
             if (choice === 'crown' && playerObj.piecesInReserve > 0) {
-                audioManager.play('crown');
+                // === NEW: Play crowning sound ===
+                audioManager.play('crownPiece');
                 piece.isCrowned = true;
                 playerObj.piecesInReserve--;
                 gameState.message = `${player === 'p1' ? 'Your' : "The Bot's"} piece has been Double-Stacked!`;
             } else if (choice === 'reinforce' && placementData && playerObj.piecesInReserve > 0) {
-                audioManager.play('reinforce');
+                audioManager.play('move');
                 const { newPiecePos, relocatedPiecePos } = placementData;
                 const newId = Math.max(0, ...gameState.pieces.map(p => p.id)) + 1;
                 const newPiece = { id: newId, owner: player, isCrowned: false, position: null };
@@ -1598,6 +1570,16 @@
         }
 
         function setWinner(winner, message) {
+            audioManager.stopAllLoops(); // Stop any background music/sounds
+            const record = getRecord();
+            if (winner === 'p1') {
+                record.wins++;
+            } else { // 'p2' is the winner
+                record.losses++;
+            }
+            saveRecord(record);
+            displayRecord();
+
             gameState.gamePhase = 'GAME_OVER';
             gameState.winner = winner;
             document.body.classList.add('game-over');
@@ -1610,7 +1592,8 @@
             fireworksContainer.innerHTML = ''; 
 
             if (winner === 'p1') {
-                audioManager.play('music_victory');
+                // === NEW: Play looping winner music ===
+                audioManager.play('winnerMusic', true);
                 loserAnimationContainer.style.display = 'none';
                 fireworksContainer.style.display = 'block';
                 const numFireworks = 25; 
@@ -1624,7 +1607,9 @@
                     fireworksContainer.appendChild(firework);
                 }
             } else {
-                audioManager.play('music_defeat');
+                // === NEW: Play defeat sound and voiceover ===
+                audioManager.play('defeat');
+                audioManager.play('loserVoice');
                 fireworksContainer.style.display = 'none';
                 loserAnimationContainer.style.display = 'block';
                 loserAnimationContainer.innerHTML = '<div class="loser-icon"></div>';
@@ -1692,7 +1677,7 @@
             
             // Show thinking indicator for Normal & Hard Mode
             getEl('thinking-indicator').style.display = 'block';
-            audioManager.play('thinking'); // Start sound
+            // audioManager.play('thinking'); // Sound removed as requested
             render();
 
             setTimeout(() => { 
@@ -1700,7 +1685,7 @@
                 
                 // Hide thinking indicator
                 getEl('thinking-indicator').style.display = 'none';
-                audioManager.stop('thinking'); // Stop sound
+                // audioManager.stop('thinking'); // Sound removed as requested
 
                 if (!bestAction) {
                     console.error("AI FAILSAFE: No action found. This should have been a forfeit. Forcing end of turn.");
@@ -2014,6 +1999,8 @@
         }
 
         function showDiceRoll(title) {
+            // === MODIFIED: Play looping dice sound during roll ===
+            audioManager.play('diceLoop', true);
             return new Promise(resolve => {
                 const modal = getEl('dice-modal');
                 const svg = getEl('dice-svg');
@@ -2024,15 +2011,13 @@
                 modal.classList.add('visible');
                 svg.classList.add('rolling');
                 let tumbleInterval = setInterval(() => { text.textContent = Math.floor(Math.random() * 20) + 1; }, 60);
-                diceTickInterval = setInterval(() => { audioManager.play('dice_tick'); }, 70);
                 setTimeout(() => {
                     clearInterval(tumbleInterval);
-                    clearInterval(diceTickInterval);
-                    diceTickInterval = null;
                     svg.classList.remove('rolling');
                     const roll = rollD20();
                     text.textContent = roll;
                     setTimeout(() => {
+                        audioManager.stop('diceLoop'); // Stop the dice loop
                         modal.classList.remove('visible');
                         resolve(roll);
                     }, 1200);
@@ -2126,7 +2111,7 @@
         const audioToggleButton = getEl('audio-toggle-button');
         audioToggleButton.onclick = () => audioManager.toggleMute();
 
-        // Start the game. No preloading needed for procedural audio.
+        // Start the game.
         getEl('message').textContent = "Ready to Play!";
         initializeGame();
     </script>
